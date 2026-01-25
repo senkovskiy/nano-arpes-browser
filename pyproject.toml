@@ -1,18 +1,14 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "nano-arpes-browser"
 version = "0.1.0"
-description = "Professional nano-ARPES data browser and analysis tool"
+description = "nano-ARPES data browser and analysis tool"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Boris Senkovskiy", email = "***@***.com"}
+    {name = "Boris Senkovskiy", email = "81705695+senkovskiy@users.noreply.github.com"}
 ]
-keywords = ["ARPES", "nano-ARPES", "photoemission", "spectroscopy", "synchrotron"]
+keywords = ["ARPES", "nano-ARPES", "micro-ARPES", "photoemission", "spectroscopy", "synchrotron", "Soleil"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
@@ -21,6 +17,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Environment :: X11 Applications :: Qt",
 ]
 
 dependencies = [
@@ -45,6 +43,16 @@ dev = [
     "build>=1.0",
     "twine>=5.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/senkovskiy/nano-arpes-browser"
+Documentation = "https://github.com/senkovskiy/nano-arpes-browser#readme"
+Repository = "https://github.com/senkovskiy/nano-arpes-browser"
+Issues = "https://github.com/senkovskiy/nano-arpes-browser/issues"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project.scripts]
 nano-arpes-browser = "nano_arpes_browser.gui.app:main"
@@ -94,5 +102,7 @@ addopts = ["-v", "--tb=short"]
 
 [dependency-groups]
 dev = [
+    "build>=1.4.0",
     "ruff>=0.14.14",
+    "twine>=6.2.0",
 ]
