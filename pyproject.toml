@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Boris Senkovskiy", email = "***@***.com"}
 ]
 keywords = ["ARPES", "nano-ARPES", "photoemission", "spectroscopy", "synchrotron"]
 classifiers = [
@@ -41,6 +41,9 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.0",
     "pyinstaller>=6.0",
+    "pre-commit>=3.0",
+    "build>=1.0",
+    "twine>=5.0",
 ]
 
 [project.scripts]
@@ -88,3 +91,8 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = ["-v", "--tb=short"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.14",
+]
