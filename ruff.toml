@@ -1,0 +1,82 @@
+# ruff.toml
+# Standalone Ruff configuration for nano-arpes-browser
+
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[lint]
+select = [
+    # Core
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    
+    # Style
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    
+    # Quality
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    
+    # Specific
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "NPY",    # numpy-specific rules
+    "RUF",    # Ruff-specific rules
+    
+    # Documentation (optional - enable if you want)
+    # "D",    # pydocstyle
+]
+
+ignore = [
+    # Line length handled by formatter
+    "E501",
+    
+    # Physics conventions - we use uppercase for some variables
+    # E.g., E for energy, K for momentum
+    "N803",   # argument name should be lowercase
+    "N806",   # variable name should be lowercase
+    
+    # Allow print statements (useful for CLI/debugging)
+    # "T201",
+]
+
+# Fixable rules (ruff check --fix will auto-fix these)
+fixable = ["ALL"]
+unfixable = []
+
+[lint.per-file-ignores]
+# Tests can use assert and have unused fixture arguments
+"tests/**/*.py" = ["ARG", "S101", "PLR2004"]
+
+# __init__.py can have unused imports (for public API)
+"**/__init__.py" = ["F401", "F403"]
+
+# GUI files might have unused arguments from Qt signals
+"**/gui/**/*.py" = ["ARG001"]
+
+[lint.isort]
+known-first-party = ["nano_arpes_browser"]
+force-single-line = false
+lines-after-imports = 2
+section-order = [
+    "future",
+    "standard-library", 
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[lint.pydocstyle]
+convention = "google"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
