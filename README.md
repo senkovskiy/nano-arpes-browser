@@ -9,17 +9,15 @@ Professional nano-ARPES data browser and analysis tool.
 - Angle to k-space conversion
 - Support for NXS/HDF5 file formats
 
-## Installation
-
-### From Source (Development)
+## Installation (Development)
 
 ```bash
-# Clone repository
-git clone https://github.com/yourusername/nano-arpes-browser.git
+# Clone the repository
+git clone https://github.com/yourusername/nano-arpes-browser
 cd nano-arpes-browser
 
-# Install with uv
-uv sync --all-extras
+# Install all dependencies (requires uv)
+make install
 
-# Run
-uv run nano-arpes-browser
+# Run the application
+make run
