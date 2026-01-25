@@ -776,7 +776,9 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "build" },
     { name = "ruff" },
+    { name = "twine" },
 ]
 
 [package.metadata]
@@ -801,7 +803,11 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.14.14" }]
+dev = [
+    { name = "build", specifier = ">=1.4.0" },
+    { name = "ruff", specifier = ">=0.14.14" },
+    { name = "twine", specifier = ">=6.2.0" },
+]
 
 [[package]]
 name = "nh3"
