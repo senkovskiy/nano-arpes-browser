@@ -2,7 +2,6 @@
 
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 from pydantic import (
@@ -84,10 +83,10 @@ class EnergyAngleROI(BaseModel):
     energy_end_idx: int = Field(ge=0)
 
     # Physical values
-    angle_start: Optional[float] = None
-    angle_end: Optional[float] = None
-    energy_start: Optional[float] = None
-    energy_end: Optional[float] = None
+    angle_start: float | None = None
+    angle_end: float | None = None
+    energy_start: float | None = None
+    energy_end: float | None = None
 
     @model_validator(mode="after")
     def validate_ranges(self) -> "EnergyAngleROI":
@@ -108,16 +107,16 @@ class EnergyAngleROI(BaseModel):
 class ExperimentalParameters(BaseModel):
     """Experimental parameters for ARPES measurement."""
 
-    photon_energy: Optional[float] = Field(
+    photon_energy: float | None = Field(
         default=None, gt=0, description="Photon energy in eV"
     )
     work_function: float = Field(
         default=4.5, gt=0, lt=10, description="Analyzer work function in eV"
     )
-    temperature: Optional[float] = Field(
+    temperature: float | None = Field(
         default=None, ge=0, description="Sample temperature in K"
     )
-    polarization: Optional[str] = Field(
+    polarization: str | None = Field(
         default=None, description="Light polarization (LH, LV, CR, CL)"
     )
     energy_type: EnergyType = Field(
@@ -126,7 +125,7 @@ class ExperimentalParameters(BaseModel):
 
     @computed_field
     @property
-    def fermi_energy(self) -> Optional[float]:
+    def fermi_energy(self) -> float | None:
         """Fermi energy (kinetic) if photon energy is known."""
         if self.photon_energy is not None:
             return self.photon_energy - self.work_function
@@ -180,11 +179,11 @@ class ARPESDataset(BaseModel):
     experiment: ExperimentalParameters = Field(default_factory=ExperimentalParameters)
 
     # File info
-    filepath: Optional[Path] = None
+    filepath: Path | None = None
     metadata: dict = Field(default_factory=dict)
 
     # Cache
-    _integrated_image: Optional[np.ndarray] = None
+    _integrated_image: np.ndarray | None = None
 
     @field_validator("intensity")
     @classmethod
@@ -233,7 +232,7 @@ class ARPESDataset(BaseModel):
     def get_spectrum_at(
         self,
         position: SpatialPosition,
-        integration: Optional[IntegrationParams] = None,
+        integration: IntegrationParams | None = None,
     ) -> np.ndarray:
         """
         Extract ARPES spectrum at spatial position.
@@ -261,7 +260,7 @@ class ARPESDataset(BaseModel):
 
         return self.intensity[y_idx, x_idx, :, :]
 
-    def get_spatial_image(self, roi: Optional[EnergyAngleROI] = None) -> np.ndarray:
+    def get_spatial_image(self, roi: EnergyAngleROI | None = None) -> np.ndarray:
         """
         Get spatial image, optionally integrated over ROI.
 
@@ -294,7 +293,7 @@ class ARPESDataset(BaseModel):
         )
 
     def get_kinetic_energy(
-        self, binding_energy: Optional[np.ndarray] = None
+        self, binding_energy: np.ndarray | None = None
     ) -> np.ndarray:
         """
         Get kinetic energy axis.

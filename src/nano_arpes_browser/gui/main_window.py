@@ -1,7 +1,6 @@
 """Main application window."""
 
 from pathlib import Path
-from typing import Optional
 
 import pyqtgraph as pg
 from PyQt6.QtCore import QSettings, Qt
@@ -34,9 +33,9 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         # State
-        self.dataset: Optional[ARPESDataset] = None
-        self.current_position: Optional[SpatialPosition] = None
-        self.current_roi: Optional[EnergyAngleROI] = None
+        self.dataset: ARPESDataset | None = None
+        self.current_position: SpatialPosition | None = None
+        self.current_roi: EnergyAngleROI | None = None
         self.k_converter = KSpaceConverter()
         self._dark_theme = True
 
@@ -127,14 +126,14 @@ class MainWindow(QMainWindow):
         export_menu.addSeparator()
         export_menu.addAction("Spectrum (CSV)...", lambda: self._save_arpes("csv"))
         export_menu.addAction("Spectrum (Igor)...", lambda: self._save_arpes("itx"))
-        
+
         export_menu.addSeparator()
-        
+
         # Region export
         export_menu.addAction("Selected Region (Igor)...", self._on_save_region_igor)
-        
+
         export_menu.addSeparator()
-        
+
         # Full dataset
         export_menu.addAction("Full Dataset (Igor)...", self._on_save_full_igor)
 
@@ -621,7 +620,7 @@ class MainWindow(QMainWindow):
 
         # Get integration parameters (defines the region)
         integration = self.control_panel.get_integration_params()
-        
+
         if not integration.enabled or (integration.x_pixels == 0 and integration.y_pixels == 0):
             # Ask user to enable integration
             reply = QMessageBox.question(
@@ -640,20 +639,20 @@ class MainWindow(QMainWindow):
         # Calculate region bounds
         x_idx = self.current_position.x_index
         y_idx = self.current_position.y_index
-        
+
         x_start = max(0, x_idx - integration.x_pixels)
         x_end = min(self.dataset.x_axis.size, x_idx + integration.x_pixels + 1)
         y_start = max(0, y_idx - integration.y_pixels)
         y_end = min(self.dataset.y_axis.size, y_idx + integration.y_pixels + 1)
-        
+
         # Region info
         nx = x_end - x_start
         ny = y_end - y_start
         n_angle = self.dataset.angle_axis.size
         n_energy = self.dataset.energy_axis.size
-        
+
         region_size_mb = (nx * ny * n_angle * n_energy * 8) / (1024 * 1024)  # float64
-        
+
         # Confirm with user
         msg = (
             f"Export selected region?\n\n"
@@ -663,7 +662,7 @@ class MainWindow(QMainWindow):
             f"Total: {nx}×{ny}×{n_angle}×{n_energy} = {nx*ny*n_angle*n_energy:,} points\n"
             f"Estimated size: {region_size_mb:.1f} MB"
         )
-        
+
         reply = QMessageBox.question(
             self,
             "Export Region",
@@ -671,7 +670,7 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
         )
-        
+
         if reply != QMessageBox.StandardButton.Yes:
             return
 
@@ -701,25 +700,25 @@ class MainWindow(QMainWindow):
             # Note: x index is reversed in the data
             x_idx_data_start = self.dataset.x_axis.size - 1 - (x_idx + integration.x_pixels)
             x_idx_data_end = self.dataset.x_axis.size - 1 - (x_idx - integration.x_pixels) + 1
-            
+
             # Ensure correct order
             if x_idx_data_start > x_idx_data_end:
                 x_idx_data_start, x_idx_data_end = x_idx_data_end, x_idx_data_start
-            
+
             # Clamp to valid range
             x_idx_data_start = max(0, x_idx_data_start)
             x_idx_data_end = min(self.dataset.x_axis.size, x_idx_data_end)
-            
+
             region_data = self.dataset.intensity[
                 y_start:y_end,
                 x_idx_data_start:x_idx_data_end,
                 :, :
             ]
-            
+
             # Get axis slices
             x_axis_region = self.dataset.x_axis.values[x_start:x_end]
             y_axis_region = self.dataset.y_axis.values[y_start:y_end]
-            
+
             # Save to Igor format
             DataExporter.save_region_itx(
                 region_data,
@@ -737,7 +736,7 @@ class MainWindow(QMainWindow):
             )
 
             self._set_status(f"Saved: {Path(filepath).name}")
-            
+
             size_mb = Path(filepath).stat().st_size / (1024 * 1024)
             QMessageBox.information(
                 self,
@@ -753,7 +752,7 @@ class MainWindow(QMainWindow):
         finally:
             QApplication.restoreOverrideCursor()
             self._hide_progress()
-            
+
     def _on_save_full_igor(self) -> None:
         """Save full dataset as Igor .itx."""
         if self.dataset is None:
@@ -763,17 +762,17 @@ class MainWindow(QMainWindow):
         # Calculate size and warn user
         data_size_gb = self.dataset.intensity.nbytes / (1024**3)
         shape = self.dataset.intensity.shape
-        
+
         msg = (
             f"Export full 4D dataset?\n\n"
             f"Data shape: {shape[0]}×{shape[1]}×{shape[2]}×{shape[3]}\n"
             f"(Y × X × Angle × Energy)\n\n"
             f"Estimated size: {data_size_gb:.2f} GB\n\n"
         )
-        
+
         if data_size_gb > 2.0:
             msg += "⚠️ Large file! Export may take several minutes."
-        
+
         reply = QMessageBox.question(
             self,
             "Export Full Dataset",
@@ -781,7 +780,7 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
         )
-        
+
         if reply != QMessageBox.StandardButton.Yes:
             return
 
@@ -805,26 +804,26 @@ class MainWindow(QMainWindow):
 
         try:
             result = DataExporter.save_full_dataset_itx(
-                self.dataset, 
+                self.dataset,
                 filepath,
                 include_4d_data=True,
                 max_file_size_gb=10.0,  # Allow up to 10 GB
             )
-            
+
             self._set_status(f"Saved: {Path(filepath).name}")
 
             size_mb = Path(filepath).stat().st_size / (1024 * 1024)
-            
+
             info_msg = (
                 f"Export complete!\n\n"
                 f"File: {Path(filepath).name}\n"
                 f"Size: {size_mb:.1f} MB\n\n"
                 f"Waves created:\n"
             )
-            
+
             if result.get("included_4d", False):
                 info_msg += f"• arpes_4d: {shape} - Full 4D data\n"
-            
+
             info_msg += (
                 f"• spatial_map: Integrated image\n"
                 f"• x_spatial, y_spatial: Spatial axes\n"
@@ -832,9 +831,9 @@ class MainWindow(QMainWindow):
                 f"In Igor Pro:\n"
                 f'LoadWave/T "{filepath}"'
             )
-            
+
             QMessageBox.information(self, "Export Complete", info_msg)
-            
+
         except Exception as e:
             QMessageBox.critical(self, "Export Error", f"Failed to save:\n{e}")
         finally:

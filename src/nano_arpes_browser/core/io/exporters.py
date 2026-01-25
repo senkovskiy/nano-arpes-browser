@@ -2,7 +2,6 @@
 
 import re
 from pathlib import Path
-from typing import Optional, Union
 
 import numpy as np
 
@@ -17,7 +16,7 @@ class DataExporter:
     @staticmethod
     def save_csv(
         data: np.ndarray,
-        filepath: Union[str, Path],
+        filepath: str | Path,
         delimiter: str = ",",
     ) -> None:
         """Save 2D array to CSV file."""
@@ -54,8 +53,8 @@ class DataExporter:
         f,
         name: str,
         data: np.ndarray,
-        x_axis: Optional[np.ndarray] = None,
-        y_axis: Optional[np.ndarray] = None,
+        x_axis: np.ndarray | None = None,
+        y_axis: np.ndarray | None = None,
         x_label: str = "",
         y_label: str = "",
         z_label: str = "",
@@ -92,10 +91,10 @@ class DataExporter:
         f,
         name: str,
         data: np.ndarray,
-        dim0_axis: Optional[np.ndarray] = None,
-        dim1_axis: Optional[np.ndarray] = None,
-        dim2_axis: Optional[np.ndarray] = None,
-        dim3_axis: Optional[np.ndarray] = None,
+        dim0_axis: np.ndarray | None = None,
+        dim1_axis: np.ndarray | None = None,
+        dim2_axis: np.ndarray | None = None,
+        dim3_axis: np.ndarray | None = None,
         dim0_label: str = "",
         dim1_label: str = "",
         dim2_label: str = "",
@@ -157,10 +156,10 @@ class DataExporter:
     @staticmethod
     def save_itx(
         data: np.ndarray,
-        filepath: Union[str, Path],
+        filepath: str | Path,
         wave_name: str = "data",
-        x_axis: Optional[np.ndarray] = None,
-        y_axis: Optional[np.ndarray] = None,
+        x_axis: np.ndarray | None = None,
+        y_axis: np.ndarray | None = None,
         x_label: str = "",
         y_label: str = "",
         z_label: str = "Intensity",
@@ -186,10 +185,10 @@ class DataExporter:
     @staticmethod
     def save_itx_with_axes(
         data: np.ndarray,
-        filepath: Union[str, Path],
+        filepath: str | Path,
         wave_name: str = "data",
-        x_axis: Optional[np.ndarray] = None,
-        y_axis: Optional[np.ndarray] = None,
+        x_axis: np.ndarray | None = None,
+        y_axis: np.ndarray | None = None,
         x_label: str = "X",
         y_label: str = "Y",
         z_label: str = "Intensity",
@@ -220,7 +219,7 @@ class DataExporter:
     @staticmethod
     def save_region_itx(
         data: np.ndarray,
-        filepath: Union[str, Path],
+        filepath: str | Path,
         x_axis: np.ndarray,
         y_axis: np.ndarray,
         angle_axis: np.ndarray,
@@ -303,17 +302,17 @@ class DataExporter:
             f.write("\n")
 
             # --- Center position ---
-            f.write(f"WAVES/N=(2)/D region_center\n")
+            f.write("WAVES/N=(2)/D region_center\n")
             f.write("BEGIN\n")
             f.write(f"\t{center_x:.6g}\n")
             f.write(f"\t{center_y:.6g}\n")
             f.write("END\n")
             f.write(f'X SetScale d, 0, 0, "{x_unit}", region_center\n')
-            
+
     @staticmethod
     def save_full_dataset_itx(
         dataset,  # ARPESDataset
-        filepath: Union[str, Path],
+        filepath: str | Path,
         include_4d_data: bool = True,
         max_file_size_gb: float = 2.0,
     ) -> None:

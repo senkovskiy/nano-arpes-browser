@@ -24,7 +24,7 @@ class ControlPanel(QWidget):
 
     # Signals
     load_requested = pyqtSignal()
-    
+
     # Export signals
     export_map_csv_requested = pyqtSignal()
     export_map_igor_requested = pyqtSignal()
@@ -32,7 +32,7 @@ class ControlPanel(QWidget):
     export_spectrum_igor_requested = pyqtSignal()
     export_region_igor_requested = pyqtSignal()
     export_full_igor_requested = pyqtSignal()
-    
+
     # Other signals
     k_space_changed = pyqtSignal()
     integration_changed = pyqtSignal()
@@ -172,7 +172,7 @@ class ControlPanel(QWidget):
 
         # --- Current View Section ---
         self.export_menu.addSection("Current View")
-        
+
         # Map exports
         map_menu = self.export_menu.addMenu("📍 Spatial Map")
         self.export_map_csv_action = map_menu.addAction("CSV (.csv)")
@@ -186,7 +186,7 @@ class ControlPanel(QWidget):
         self.export_region_igor_action = self.export_menu.addAction(
             "📦 Selected Region (Igor .itx)"
         )
-            
+
         self.export_menu.addSeparator()
 
         # --- Full Dataset Section ---

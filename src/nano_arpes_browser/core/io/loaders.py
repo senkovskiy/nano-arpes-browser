@@ -1,7 +1,6 @@
 """File loaders for ARPES data formats."""
 
 from pathlib import Path
-from typing import Union, Optional
 
 import h5py
 import numpy as np
@@ -26,8 +25,8 @@ class DataLoader:
     @classmethod
     def load_nxs(
         cls,
-        filepath: Union[str, Path],
-        photon_energy: Optional[float] = None,
+        filepath: str | Path,
+        photon_energy: float | None = None,
         energy_type: EnergyType = EnergyType.KINETIC,
     ) -> ARPESDataset:
         """
@@ -106,7 +105,7 @@ class DataLoader:
     @classmethod
     def load(
         cls,
-        filepath: Union[str, Path],
+        filepath: str | Path,
         **kwargs,
     ) -> ARPESDataset:
         """

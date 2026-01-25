@@ -1,6 +1,5 @@
 """Spatial map viewer widget."""
 
-from typing import Optional
 
 import numpy as np
 import pyqtgraph as pg
@@ -109,7 +108,7 @@ class SpatialViewer(QWidget):
         # Emit signal manually since programmatic changes don't always trigger
         self.position_changed.emit(x, y)
 
-    def get_position(self) -> Optional[tuple[float, float]]:
+    def get_position(self) -> tuple[float, float] | None:
         """Get current crosshair position."""
         if self._x_axis is None:
             return None
@@ -119,7 +118,7 @@ class SpatialViewer(QWidget):
         """Set plot title."""
         self.plot.setTitle(title)
 
-    def get_current_image(self) -> Optional[np.ndarray]:
+    def get_current_image(self) -> np.ndarray | None:
         """Get current image data."""
         return self._image_data
 

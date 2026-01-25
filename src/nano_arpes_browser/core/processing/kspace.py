@@ -17,7 +17,6 @@ Physics:
 """
 
 from dataclasses import dataclass
-from typing import Optional, Union
 
 import numpy as np
 from scipy import interpolate
@@ -61,9 +60,9 @@ class KSpaceConverter:
 
     def angle_to_k(
         self,
-        angle_deg: Union[float, np.ndarray],
-        kinetic_energy_eV: Union[float, np.ndarray],
-    ) -> Union[float, np.ndarray]:
+        angle_deg: float | np.ndarray,
+        kinetic_energy_eV: float | np.ndarray,
+    ) -> float | np.ndarray:
         """
         Convert emission angle to parallel momentum.
 
@@ -86,9 +85,9 @@ class KSpaceConverter:
 
     def k_to_angle(
         self,
-        k: Union[float, np.ndarray],
-        kinetic_energy_eV: Union[float, np.ndarray],
-    ) -> Union[float, np.ndarray]:
+        k: float | np.ndarray,
+        kinetic_energy_eV: float | np.ndarray,
+    ) -> float | np.ndarray:
         """
         Convert parallel momentum to emission angle.
 
@@ -133,7 +132,7 @@ class KSpaceConverter:
         energy_axis: np.ndarray,
         angle_axis: np.ndarray,
         zero_angle: float = 0.0,
-        n_k_points: Optional[int] = None,
+        n_k_points: int | None = None,
         interpolation_kind: str = "linear",
     ) -> KSpaceResult:
         """
@@ -226,7 +225,7 @@ class KSpaceConverter:
         energy_axis: np.ndarray,
         angle_axis: np.ndarray,
         zero_angle: float = 0.0,
-        n_k_points: Optional[int] = None,
+        n_k_points: int | None = None,
     ) -> KSpaceResult:
         """
         Fast k-space conversion using 2D interpolation.

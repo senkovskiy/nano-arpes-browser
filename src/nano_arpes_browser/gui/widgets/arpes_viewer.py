@@ -1,6 +1,5 @@
 """ARPES spectrum viewer widget."""
 
-from typing import Optional
 
 import numpy as np
 import pyqtgraph as pg
@@ -18,9 +17,9 @@ class ARPESViewer(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._spectrum_data: Optional[np.ndarray] = None
-        self._x_axis: Optional[np.ndarray] = None  # angle or k
-        self._energy_axis: Optional[np.ndarray] = None
+        self._spectrum_data: np.ndarray | None = None
+        self._x_axis: np.ndarray | None = None  # angle or k
+        self._energy_axis: np.ndarray | None = None
         self._x_label: str = "Angle"
         self._y_label: str = "Energy"
 
@@ -118,7 +117,7 @@ class ARPESViewer(QWidget):
 
         # Update scale to match current axes
         self._update_scale()
-        
+
         # Reset ROI to fit new data
         self._reset_roi()
 
@@ -145,7 +144,7 @@ class ARPESViewer(QWidget):
         height = e_max - e_min + e_step
 
         self.image_item.setRect(QRectF(left, bottom, width, height))
-        
+
         # Auto-range the plot to show all data
         self.plot.autoRange()
 
@@ -186,11 +185,11 @@ class ARPESViewer(QWidget):
         """Hide zero angle line."""
         self.zero_line.hide()
 
-    def get_current_data(self) -> Optional[np.ndarray]:
+    def get_current_data(self) -> np.ndarray | None:
         """Get current spectrum data."""
         return self._spectrum_data
 
-    def get_current_axes(self) -> tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+    def get_current_axes(self) -> tuple[np.ndarray | None, np.ndarray | None]:
         """Get current x and energy axes."""
         return self._x_axis, self._energy_axis
 
