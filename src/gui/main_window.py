@@ -209,17 +209,13 @@ class MainWindow(QMainWindow):
         self.control_panel.export_spectrum_igor_requested.connect(
             lambda: self._save_arpes(format="itx")
         )
-        self.control_panel.export_region_igor_requested.connect(
-            self._on_save_region_igor
-        )
+        self.control_panel.export_region_igor_requested.connect(self._on_save_region_igor)
         self.control_panel.export_full_igor_requested.connect(self._on_save_full_igor)
 
         # Control panel - other
         self.control_panel.k_space_changed.connect(self._on_kspace_changed)
         self.control_panel.integration_changed.connect(self._on_integration_changed)
-        self.control_panel.display_settings_changed.connect(
-            self._on_display_settings_changed
-        )
+        self.control_panel.display_settings_changed.connect(self._on_display_settings_changed)
 
         # Spatial viewer
         self.spatial_viewer.position_changed.connect(self._on_spatial_position_changed)
@@ -379,8 +375,7 @@ class MainWindow(QMainWindow):
 
         # Update spatial viewer title
         self.spatial_viewer.set_title(
-            f"X: {self.current_position.x_coord:.1f} µm, "
-            f"Y: {self.current_position.y_coord:.1f} µm"
+            f"X: {self.current_position.x_coord:.1f} µm, Y: {self.current_position.y_coord:.1f} µm"
         )
 
         # Update status
@@ -417,12 +412,8 @@ class MainWindow(QMainWindow):
                 try:
                     angle_start = self.k_converter.k_to_angle(x_start, e_center)
                     angle_end = self.k_converter.k_to_angle(x_end, e_center)
-                    angle_start_idx = self.dataset.angle_axis.find_nearest_index(
-                        angle_start
-                    )
-                    angle_end_idx = self.dataset.angle_axis.find_nearest_index(
-                        angle_end
-                    )
+                    angle_start_idx = self.dataset.angle_axis.find_nearest_index(angle_start)
+                    angle_end_idx = self.dataset.angle_axis.find_nearest_index(angle_end)
                 except ValueError:
                     return
             else:
@@ -659,7 +650,7 @@ class MainWindow(QMainWindow):
             f"Center: X={self.current_position.x_coord:.1f}, Y={self.current_position.y_coord:.1f} µm\n"
             f"Region: {nx} × {ny} spatial points\n"
             f"Spectra: {n_angle} × {n_energy} (angle × energy)\n\n"
-            f"Total: {nx}×{ny}×{n_angle}×{n_energy} = {nx*ny*n_angle*n_energy:,} points\n"
+            f"Total: {nx}×{ny}×{n_angle}×{n_energy} = {nx * ny * n_angle * n_energy:,} points\n"
             f"Estimated size: {region_size_mb:.1f} MB"
         )
 
@@ -710,9 +701,7 @@ class MainWindow(QMainWindow):
             x_idx_data_end = min(self.dataset.x_axis.size, x_idx_data_end)
 
             region_data = self.dataset.intensity[
-                y_start:y_end,
-                x_idx_data_start:x_idx_data_end,
-                :, :
+                y_start:y_end, x_idx_data_start:x_idx_data_end, :, :
             ]
 
             # Get axis slices
@@ -744,7 +733,7 @@ class MainWindow(QMainWindow):
                 f"Region exported!\n\n"
                 f"File: {Path(filepath).name}\n"
                 f"Size: {size_mb:.1f} MB\n\n"
-                f"Waves: region_4d, spatial_map, axes"
+                f"Waves: region_4d, spatial_map, axes",
             )
 
         except Exception as e:

@@ -1,6 +1,5 @@
 """Spatial map viewer widget."""
 
-
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import QRectF, pyqtSignal

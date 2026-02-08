@@ -1,12 +1,11 @@
 """ARPES spectrum viewer widget."""
 
-
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
-from ...core.models import EnergyAngleROI
+from src.core.models import EnergyAngleROI
 
 
 class ARPESViewer(QWidget):
@@ -85,7 +84,7 @@ class ARPESViewer(QWidget):
     ) -> None:
         """
         Set axis values and labels.
-        
+
         This should be called BEFORE set_data when changing axis types.
         """
         self._x_axis = x_axis.copy()  # Make a copy to avoid reference issues
@@ -201,9 +200,7 @@ class ARPESViewer(QWidget):
         """Update title with ROI information."""
         if roi.angle_start is not None and roi.energy_start is not None:
             if k_space:
-                title = (
-                    f"ROI - E: [{roi.energy_start:.2f} : {roi.energy_end:.2f}] eV"
-                )
+                title = f"ROI - E: [{roi.energy_start:.2f} : {roi.energy_end:.2f}] eV"
             else:
                 title = (
                     f"Angle: [{roi.angle_start:.1f}° : {roi.angle_end:.1f}°], "

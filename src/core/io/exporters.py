@@ -30,10 +30,19 @@ class DataExporter:
     @staticmethod
     def _sanitize_igor_name(name: str) -> str:
         """Sanitize wave name for Igor Pro (letters, numbers, underscore, max 31 chars)."""
-        name = re.sub(r'[^a-zA-Z0-9_]', '_', name)
+        name = re.sub(r"[^a-zA-Z0-9_]", "_", name)
         if name and not name[0].isalpha():
-            name = 'w' + name
+            name = "w" + name
         return name[:31]
+    
+    @staticmethod
+    def _axis_start_delta(axis: np.ndarray | None) -> tuple[float, float] | None:
+        """Return (start, delta) for SetScale/P or None if not applicable."""
+        if axis is None or len(axis) < 2:
+            return None
+        start = float(axis[0])
+        delta = float((axis[-1] - axis[0]) / (len(axis) - 1))
+        return start, delta
 
     @staticmethod
     def _write_1d_wave(f, name: str, data: np.ndarray, label: str = "") -> None:
@@ -70,15 +79,15 @@ class DataExporter:
             f.write(f"\t{row_data}\n")
         f.write("END\n")
 
-        if x_axis is not None and len(x_axis) >= 2:
-            x_start = float(x_axis[0])
-            x_delta = float((x_axis[-1] - x_axis[0]) / (len(x_axis) - 1))
+        sd = DataExporter._axis_start_delta(x_axis)
+        if sd:
+            x_start, x_delta = sd
             x_lbl = x_label.replace('"', "'") if x_label else ""
             f.write(f'X SetScale/P x, {x_start}, {x_delta}, "{x_lbl}", {name}\n')
 
-        if y_axis is not None and len(y_axis) >= 2:
-            y_start = float(y_axis[0])
-            y_delta = float((y_axis[-1] - y_axis[0]) / (len(y_axis) - 1))
+        sd = DataExporter._axis_start_delta(y_axis)
+        if sd:
+            y_start, y_delta = sd
             y_lbl = y_label.replace('"', "'") if y_label else ""
             f.write(f'X SetScale/P y, {y_start}, {y_delta}, "{y_lbl}", {name}\n')
 
@@ -113,40 +122,40 @@ class DataExporter:
         f.write("BEGIN\n")
 
         # Igor expects column-major (Fortran) order
-        flat_data = data.flatten(order='F')
+        flat_data = data.flatten(order="F")
 
         # Write in rows for readability
         values_per_line = 10
         for i in range(0, len(flat_data), values_per_line):
-            chunk = flat_data[i:i + values_per_line]
+            chunk = flat_data[i : i + values_per_line]
             line = "\t".join(f"{float(v):.6g}" for v in chunk)
             f.write(f"\t{line}\n")
 
         f.write("END\n")
 
         # Set scaling for each dimension (x=dim0, y=dim1, z=dim2, t=dim3)
-        if dim0_axis is not None and len(dim0_axis) >= 2:
-            start = float(dim0_axis[0])
-            delta = float((dim0_axis[-1] - dim0_axis[0]) / (len(dim0_axis) - 1))
-            lbl = dim0_label.replace('"', "'")
+        sd = DataExporter._axis_start_delta(dim0_axis)
+        if sd:
+            start, delta = sd
+            lbl = dim0_label.replace('"', "'") if dim0_label else ""
             f.write(f'X SetScale/P x, {start}, {delta}, "{lbl}", {name}\n')
 
-        if dim1_axis is not None and len(dim1_axis) >= 2:
-            start = float(dim1_axis[0])
-            delta = float((dim1_axis[-1] - dim1_axis[0]) / (len(dim1_axis) - 1))
-            lbl = dim1_label.replace('"', "'")
+        sd = DataExporter._axis_start_delta(dim1_axis)
+        if sd:
+            start, delta = sd
+            lbl = dim1_label.replace('"', "'") if dim1_label else ""
             f.write(f'X SetScale/P y, {start}, {delta}, "{lbl}", {name}\n')
 
-        if dim2_axis is not None and len(dim2_axis) >= 2:
-            start = float(dim2_axis[0])
-            delta = float((dim2_axis[-1] - dim2_axis[0]) / (len(dim2_axis) - 1))
-            lbl = dim2_label.replace('"', "'")
+        sd = DataExporter._axis_start_delta(dim2_axis)
+        if sd:
+            start, delta = sd
+            lbl = dim2_label.replace('"', "'") if dim2_label else ""
             f.write(f'X SetScale/P z, {start}, {delta}, "{lbl}", {name}\n')
 
-        if dim3_axis is not None and len(dim3_axis) >= 2:
-            start = float(dim3_axis[0])
-            delta = float((dim3_axis[-1] - dim3_axis[0]) / (len(dim3_axis) - 1))
-            lbl = dim3_label.replace('"', "'")
+        sd = DataExporter._axis_start_delta(dim3_axis)
+        if sd:
+            start, delta = sd
+            lbl = dim3_label.replace('"', "'") if dim3_label else ""
             f.write(f'X SetScale/P t, {start}, {delta}, "{lbl}", {name}\n')
 
     # ========================================================================
@@ -169,17 +178,22 @@ class DataExporter:
         filepath = Path(filepath)
         wave_name = DataExporter._sanitize_igor_name(wave_name)
 
-        with open(filepath, "w", newline='\n') as f:
+        with open(filepath, "w", newline="\n") as f:
             f.write("IGOR\n")
 
             DataExporter._write_2d_wave(
-                f, wave_name, data,
-                x_axis=x_axis, y_axis=y_axis,
-                x_label=x_label, y_label=y_label, z_label=z_label
+                f,
+                wave_name,
+                data,
+                x_axis=x_axis,
+                y_axis=y_axis,
+                x_label=x_label,
+                y_label=y_label,
+                z_label=z_label,
             )
 
             if note:
-                note_escaped = note.replace('"', "'").replace('\n', '\\r')
+                note_escaped = note.replace('"', "'").replace("\n", "\\r")
                 f.write(f'X Note {wave_name}, "{note_escaped}"\n')
 
     @staticmethod
@@ -197,14 +211,19 @@ class DataExporter:
         filepath = Path(filepath)
         wave_name = DataExporter._sanitize_igor_name(wave_name)
 
-        with open(filepath, "w", newline='\n') as f:
+        with open(filepath, "w", newline="\n") as f:
             f.write("IGOR\n")
 
             # Main data wave
             DataExporter._write_2d_wave(
-                f, wave_name, data,
-                x_axis=x_axis, y_axis=y_axis,
-                x_label=x_label, y_label=y_label, z_label=z_label
+                f,
+                wave_name,
+                data,
+                x_axis=x_axis,
+                y_axis=y_axis,
+                x_label=x_label,
+                y_label=y_label,
+                z_label=z_label,
             )
 
             # Axis waves
@@ -244,7 +263,7 @@ class DataExporter:
         """
         filepath = Path(filepath)
 
-        with open(filepath, "w", newline='\n') as f:
+        with open(filepath, "w", newline="\n") as f:
             f.write("IGOR\n")
 
             # --- 4D region data ---
@@ -315,7 +334,7 @@ class DataExporter:
         filepath: str | Path,
         include_4d_data: bool = True,
         max_file_size_gb: float = 2.0,
-    ) -> None:
+    ) -> dict:
         """
         Export full ARPES dataset to Igor Pro format.
 
@@ -330,6 +349,13 @@ class DataExporter:
             filepath: Output path
             include_4d_data: Whether to include full 4D data
             max_file_size_gb: Maximum file size limit for 4D export
+
+        Returns:
+            dict with keys:
+                filepath (Path): output file path
+                included_4d (bool): whether full 4D wave was written
+                data_size_gb (float): size of intensity array in GB
+                shape (tuple[int,int,int,int]): dataset intensity shape
         """
         filepath = Path(filepath)
 
@@ -337,7 +363,7 @@ class DataExporter:
         data_size_gb = dataset.intensity.nbytes / (1024**3)
         will_include_4d = include_4d_data and (data_size_gb <= max_file_size_gb)
 
-        with open(filepath, "w", newline='\n') as f:
+        with open(filepath, "w", newline="\n") as f:
             f.write("IGOR\n")
 
             # --- Full 4D data ---

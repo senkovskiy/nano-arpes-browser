@@ -19,7 +19,7 @@ Physics:
 from dataclasses import dataclass
 
 import numpy as np
-from scipy import interpolate
+from scipy.interpolate import interp1d
 
 
 # Physical constant: sqrt(2 * m_e) / hbar in units of Å⁻¹ / sqrt(eV)
@@ -128,12 +128,12 @@ class KSpaceConverter:
 
     def convert_spectrum(
         self,
-        spectrum: np.ndarray,
-        energy_axis: np.ndarray,
-        angle_axis: np.ndarray,
+        spectrum: np.ndarray,          # shape (n_angles, n_energies)
+        energy_axis: np.ndarray,       # shape (n_energies,)
+        angle_axis: np.ndarray,        # shape (n_angles,)
         zero_angle: float = 0.0,
         n_k_points: int | None = None,
-        interpolation_kind: str = "linear",
+    interpolation_kind: str = "linear",
     ) -> KSpaceResult:
         """
         Convert ARPES spectrum from angle to k-space.
@@ -154,69 +154,45 @@ class KSpaceConverter:
             KSpaceResult with converted spectrum and k-axis
         """
         n_angles, n_energies = spectrum.shape
-
         if n_k_points is None:
             n_k_points = n_angles
 
-        # Shift angles by zero point
         angles_shifted = angle_axis - zero_angle
+        e_max = float(np.max(energy_axis))
 
-        # Determine k range from maximum energy (widest k range)
-        e_max = energy_axis.max()
-
-        # Calculate k range at maximum energy
-        k_at_max_e_min_angle = self.angle_to_k(angles_shifted.min(), e_max)
-        k_at_max_e_max_angle = self.angle_to_k(angles_shifted.max(), e_max)
-
-        k_min = k_at_max_e_min_angle
-        k_max = k_at_max_e_max_angle
-
-        # Create uniform k grid
+        k_min = float(self.angle_to_k(np.min(angles_shifted), e_max))
+        k_max = float(self.angle_to_k(np.max(angles_shifted), e_max))
         k_axis = np.linspace(k_min, k_max, n_k_points)
 
-        # Initialize output array
-        result = np.zeros((n_k_points, n_energies))
+        out = np.zeros((n_k_points, n_energies), dtype=float)
 
-        # Convert each energy slice
-        for i_e, energy in enumerate(energy_axis):
-            if energy <= 0:
-                continue  # Skip non-positive energies
+        for i_e, e in enumerate(energy_axis):
+            if e <= 0:
+                continue
 
-            # Get the intensity slice at this energy
-            intensity_slice = spectrum[:, i_e]
-
-            # Create interpolation function: intensity(angle)
-            interp_func = interpolate.interp1d(
+            interp = interp1d(
                 angles_shifted,
-                intensity_slice,
+                spectrum[:, i_e],
                 kind=interpolation_kind,
                 bounds_error=False,
                 fill_value=0.0,
+                assume_sorted=False,
             )
 
-            # Calculate valid k range at this energy
-            k_max_at_e = self.max_k_at_energy(energy)
+            k_max_at_e = self.max_k_at_energy(float(e))
+            valid = np.abs(k_axis) <= k_max_at_e
+            if not np.any(valid):
+                continue
 
-            # For each k point, find corresponding angle and interpolate
-            for i_k, k in enumerate(k_axis):
-                # Check if this k is accessible at this energy
-                if np.abs(k) > k_max_at_e:
-                    result[i_k, i_e] = 0.0
-                    continue
-
-                # Convert k to angle
-                try:
-                    angle = self.k_to_angle(k, energy)
-                    result[i_k, i_e] = float(interp_func(angle))
-                except (ValueError, RuntimeWarning):
-                    result[i_k, i_e] = 0.0
+            angles = self.k_to_angle(k_axis[valid], float(e))
+            out[valid, i_e] = interp(angles)
 
         return KSpaceResult(
-            spectrum=result,
+            spectrum=out,
             k_axis=k_axis,
             energy_axis=energy_axis,
-            k_min=float(k_min),
-            k_max=float(k_max),
+            k_min=k_min,
+            k_max=k_max,
         )
 
     def convert_spectrum_fast(

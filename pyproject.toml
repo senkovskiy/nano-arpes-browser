@@ -28,20 +28,6 @@ dependencies = [
     "PyQt6>=6.5",
     "pyqtgraph>=0.13",
     "pydantic>=2.0",
-    "pytest>=9.0.2",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "pytest-qt>=4.2",
-    "pytest-cov>=4.0",
-    "ruff>=0.4",
-    "mypy>=1.0",
-    "pyinstaller>=6.0",
-    "pre-commit>=3.0",
-    "build>=1.0",
-    "twine>=5.0",
 ]
 
 [project.urls]
@@ -55,7 +41,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
-nano-arpes-browser = "nano_arpes_browser.gui.app:main"
+nano-arpes-browser = "src.gui.app:main"
 
 # ============================================================================
 # Setuptools Configuration
@@ -64,23 +50,7 @@ nano-arpes-browser = "nano_arpes_browser.gui.app:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-nano_arpes_browser = ["*.ui", "resources/*"]
-
-# ============================================================================
-# Ruff Configuration
-# ============================================================================
-[tool.ruff]
-target-version = "py310"
-line-length = 100
-src = ["src", "tests"]
-
-[tool.ruff.lint]
-select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM"]
-ignore = ["E501", "N803", "N806"]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ARG", "S101"]
-"**/__init__.py" = ["F401"]
+src = ["*.ui", "resources/*"]
 
 # ============================================================================
 # MyPy Configuration
@@ -102,7 +72,12 @@ addopts = ["-v", "--tb=short"]
 
 [dependency-groups]
 dev = [
+    "pytest>=9.0.2",
+    "pytest-qt>=4.2",
+    "pytest-cov>=4.0",
+    "mypy>=1.0",
+    "pyinstaller>=6.0",
+    "pre-commit>=3.0",
     "build>=1.4.0",
-    "ruff>=0.14.14",
     "twine>=6.2.0",
 ]

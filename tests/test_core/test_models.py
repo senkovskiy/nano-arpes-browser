@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from src.nano_arpes_browser.core.models import (
+from src.core.models import (
     ARPESDataset,
     AxisInfo,
     IntegrationParams,
@@ -45,6 +45,7 @@ def sample_dataset() -> ARPESDataset:
         angle_axis=angle_axis,
         energy_axis=energy_axis,
     )
+
 
 class TestAxisInfo:
     """Tests for AxisInfo model."""

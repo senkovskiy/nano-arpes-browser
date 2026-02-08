@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ...core.models import IntegrationParams, KSpaceParams
+from src.core.models import IntegrationParams, KSpaceParams
 
 
 class ControlPanel(QWidget):
@@ -153,10 +153,19 @@ class ControlPanel(QWidget):
         cmap_layout = QHBoxLayout()
         cmap_layout.addWidget(QLabel("Colormap:"))
         self.colormap_combo = QComboBox()
-        self.colormap_combo.addItems([
-            "viridis", "inferno", "magma", "plasma",
-            "cividis", "turbo", "hot", "cool", "grey",
-        ])
+        self.colormap_combo.addItems(
+            [
+                "viridis",
+                "inferno",
+                "magma",
+                "plasma",
+                "cividis",
+                "turbo",
+                "hot",
+                "cool",
+                "grey",
+            ]
+        )
         self.colormap_combo.setCurrentText("viridis")
         cmap_layout.addWidget(self.colormap_combo)
         display_layout.addLayout(cmap_layout)
