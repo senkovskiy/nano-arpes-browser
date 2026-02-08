@@ -374,3 +374,87 @@ class ARPESDataset(BaseModel):
             raise ValueError("Photon energy required for binding->kinetic conversion")
 
         return self.experiment.photon_energy - self.experiment.work_function - binding_energy    
+
+    def get_spatial_image_kspace_roi(
+        self,
+        k_start: float,
+        k_end: float,
+        e_start: float,
+        e_end: float,
+        *,
+        zero_angle: float = 0.0,
+        converter,  # KSpaceConverter
+    ) -> np.ndarray:
+        """
+        Compute spatial image for a ROI defined in (k, energy) coordinates.
+
+        This is the *correct* implementation for k-space mode:
+        for each energy bin, compute the corresponding angle limits for [k_start, k_end],
+        then integrate intensity over that angle interval.
+
+        Args:
+            k_start, k_end: ROI bounds in k (Å⁻¹), can be in any order
+            e_start, e_end: ROI bounds in energy axis units (same as dataset.energy_axis.values)
+            zero_angle: zero-angle offset used for k conversion alignment
+            converter: KSpaceConverter instance (provides k_to_angle)
+            fill_value: value used when k is not physically reachable at a given energy
+
+        Returns:
+            2D spatial image (display-mapped).
+        """
+        # Normalize bounds
+        k0, k1 = (float(k_start), float(k_end))
+        if k0 > k1:
+            k0, k1 = k1, k0
+
+        e0_val, e1_val = (float(e_start), float(e_end))
+        if e0_val > e1_val:
+            e0_val, e1_val = e1_val, e0_val
+
+        # Energy index range (inclusive)
+        e_idx0 = self.energy_axis.find_nearest_index(e0_val)
+        e_idx1 = self.energy_axis.find_nearest_index(e1_val)
+        if e_idx0 > e_idx1:
+            e_idx0, e_idx1 = e_idx1, e_idx0
+
+        # Build kinetic energy axis for conversion if needed
+        # (k conversion requires kinetic energy > 0)
+        if self.experiment.energy_type == EnergyType.KINETIC:
+            e_kin = self.energy_axis.values
+        else:
+            # binding -> kinetic; requires photon energy
+            e_kin = self.get_kinetic_energy(self.energy_axis.values)
+
+        # Accumulate in (y, x) internal orientation
+        accum_yx = np.zeros((self.n_y, self.n_x), dtype=float)
+
+        angles = self.angle_axis.values
+
+        for ie in range(e_idx0, e_idx1 + 1):
+            ek = float(e_kin[ie])
+            if ek <= 0:
+                continue
+
+            # Compute energy-dependent angle limits for the requested k range.
+            # IMPORTANT: angles_shifted = angle - zero_angle in your converter usage,
+            # so we invert by adding zero_angle back here.
+            try:
+                ang0 = float(converter.k_to_angle(k0, ek)) + float(zero_angle)
+                ang1 = float(converter.k_to_angle(k1, ek)) + float(zero_angle)
+            except ValueError:
+                # k not reachable at this energy -> skip (or add fill_value)
+                continue
+
+            # Convert to angle indices (inclusive)
+            a_idx0 = self.angle_axis.find_nearest_index(ang0)
+            a_idx1 = self.angle_axis.find_nearest_index(ang1)
+            if a_idx0 > a_idx1:
+                a_idx0, a_idx1 = a_idx1, a_idx0
+
+            # Integrate this energy slice over the computed angle range
+            # intensity shape: (y, x, angle, energy)
+            accum_yx += np.sum(self.intensity[:, :, a_idx0 : a_idx1 + 1, ie], axis=2)
+
+        # Reuse your single-source display mapping (rot90) via the selection helper
+        # (y, x, 1, 1) -> spatial_image_for_selection will sum over last two axes and rot90
+        return self.spatial_image_for_selection(accum_yx[:, :, None, None])

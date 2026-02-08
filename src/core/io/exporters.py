@@ -267,16 +267,19 @@ class DataExporter:
             f.write("IGOR\n")
 
             # --- 4D region data ---
+            # incoming `data` is (y, x, angle, energy) and X is already fixed to physical order by caller
+            data_igor = np.transpose(data, (1, 0, 2, 3))  # -> (x, y, angle, energy)
+
             DataExporter._write_4d_wave(
                 f,
                 "region_4d",
-                data,
-                dim0_axis=y_axis,
-                dim1_axis=x_axis,
+                data_igor,
+                dim0_axis=x_axis,
+                dim1_axis=y_axis,
                 dim2_axis=angle_axis,
                 dim3_axis=energy_axis,
-                dim0_label=f"Y ({y_unit})",
-                dim1_label=f"X ({x_unit})",
+                dim0_label=f"X ({x_unit})",
+                dim1_label=f"Y ({y_unit})",
                 dim2_label=f"Angle ({angle_unit})",
                 dim3_label=f"Energy ({energy_unit})",
             )
