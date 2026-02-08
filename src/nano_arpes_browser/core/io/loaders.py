@@ -5,7 +5,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from src.core.models import ARPESDataset, AxisInfo, EnergyType, ExperimentalParameters
+from nano_arpes_browser.core.models import ARPESDataset, AxisInfo, EnergyType, ExperimentalParameters
 
 
 class DataLoader:

@@ -66,3 +66,8 @@ help:
 	@echo "  build     - Build package"
 	@echo "  publish   - Publish to PyPI"
 	@echo "  clean     - Clean build artifacts"
+
+release:
+	rm -rf dist build *.egg-info
+	uv run python -m build
+	uv publish dist/*

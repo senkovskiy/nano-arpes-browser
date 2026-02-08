@@ -2,13 +2,17 @@
 
 import sys
 
+from nano_arpes_browser.gui.qt_bootstrap import configure_qt_plugin_paths
+
+configure_qt_plugin_paths()
+
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QApplication
 
-from src.gui.main_window import MainWindow
+from nano_arpes_browser.gui.main_window import MainWindow
 
 
-def main():
+def main() -> None:
     """Launch the Nano-ARPES Browser application."""
     app = QApplication(sys.argv)
     app.setApplicationName("Nano-ARPES Browser")
@@ -18,7 +22,7 @@ def main():
     window = MainWindow()
     window.show()
 
-    sys.exit(app.exec())
+    raise SystemExit(app.exec())
 
 
 if __name__ == "__main__":

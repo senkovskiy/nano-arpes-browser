@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
-from src.core.models import EnergyAngleROI
+from nano_arpes_browser.core.models import EnergyAngleROI
 
 
 class ARPESViewer(QWidget):

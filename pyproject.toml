@@ -1,6 +1,6 @@
 [project]
 name = "nano-arpes-browser"
-version = "0.1.0"
+version = "0.1.4"
 description = "nano-ARPES data browser and analysis tool"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -41,13 +41,14 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project.scripts]
-nano-arpes-browser = "src.gui.app:main"
+nano-arpes-browser = "nano_arpes_browser.gui.app:main"
 
 # ============================================================================
 # Setuptools Configuration
 # ============================================================================
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["nano_arpes_browser*"]
 
 [tool.setuptools.package-data]
 src = ["*.ui", "resources/*"]

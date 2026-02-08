@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core.models import IntegrationParams, KSpaceParams
+from nano_arpes_browser.core.models import IntegrationParams, KSpaceParams
 
 
 class ControlPanel(QWidget):

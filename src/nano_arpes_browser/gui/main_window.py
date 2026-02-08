@@ -19,11 +19,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from src.core.io import DataExporter, DataLoader
-from src.core.models import ARPESDataset, EnergyAngleROI, SpatialPosition
-from src.core.processing.kspace import KSpaceConverter
-from src.gui.styles import DARK_THEME, LIGHT_THEME, get_pyqtgraph_config
-from src.gui.widgets import ARPESViewer, ControlPanel, InfoPanel, SpatialViewer
+from nano_arpes_browser.core.io import DataExporter, DataLoader
+from nano_arpes_browser.core.models import ARPESDataset, EnergyAngleROI, SpatialPosition
+from nano_arpes_browser.core.processing.kspace import KSpaceConverter
+from nano_arpes_browser.gui.styles import DARK_THEME, LIGHT_THEME, get_pyqtgraph_config
+from nano_arpes_browser.gui.widgets import ARPESViewer, ControlPanel, InfoPanel, SpatialViewer
 
 
 class MainWindow(QMainWindow):
