@@ -19,11 +19,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from ..core.io import DataExporter, DataLoader
-from ..core.models import ARPESDataset, EnergyAngleROI, SpatialPosition
-from ..core.processing import KSpaceConverter
-from .styles import DARK_THEME, LIGHT_THEME, get_pyqtgraph_config
-from .widgets import ARPESViewer, ControlPanel, InfoPanel, SpatialViewer
+from src.core.io import DataExporter, DataLoader
+from src.core.models import ARPESDataset, EnergyAngleROI, SpatialPosition
+from src.core.processing.kspace import KSpaceConverter
+from src.gui.styles import DARK_THEME, LIGHT_THEME, get_pyqtgraph_config
+from src.gui.widgets import ARPESViewer, ControlPanel, InfoPanel, SpatialViewer
 
 
 class MainWindow(QMainWindow):
@@ -209,13 +209,17 @@ class MainWindow(QMainWindow):
         self.control_panel.export_spectrum_igor_requested.connect(
             lambda: self._save_arpes(format="itx")
         )
-        self.control_panel.export_region_igor_requested.connect(self._on_save_region_igor)
+        self.control_panel.export_region_igor_requested.connect(
+            self._on_save_region_igor
+        )
         self.control_panel.export_full_igor_requested.connect(self._on_save_full_igor)
 
         # Control panel - other
         self.control_panel.k_space_changed.connect(self._on_kspace_changed)
         self.control_panel.integration_changed.connect(self._on_integration_changed)
-        self.control_panel.display_settings_changed.connect(self._on_display_settings_changed)
+        self.control_panel.display_settings_changed.connect(
+            self._on_display_settings_changed
+        )
 
         # Spatial viewer
         self.spatial_viewer.position_changed.connect(self._on_spatial_position_changed)
@@ -375,7 +379,8 @@ class MainWindow(QMainWindow):
 
         # Update spatial viewer title
         self.spatial_viewer.set_title(
-            f"X: {self.current_position.x_coord:.1f} µm, Y: {self.current_position.y_coord:.1f} µm"
+            f"X: {self.current_position.x_coord:.1f} µm, "
+            f"Y: {self.current_position.y_coord:.1f} µm"
         )
 
         # Update status
@@ -391,47 +396,52 @@ class MainWindow(QMainWindow):
         else:
             self.spatial_viewer.hide_integration_rect()
 
-    def _on_roi_changed(
-        self,
-        x_start: float,
-        x_end: float,
-        e_start: float,
-        e_end: float,
-    ) -> None:
-        """Handle ROI change in ARPES viewer."""
+    def _on_roi_changed(self, x_start: float, x_end: float, e_start: float, e_end: float) -> None:
         if self.dataset is None:
             return
 
         k_params = self.control_panel.get_kspace_params()
 
-        # Convert to angle indices
-        if k_params.enabled:
-            # Convert k values back to angle indices
-            e_center = (e_start + e_end) / 2
-            if e_center > 0:
-                try:
-                    angle_start = self.k_converter.k_to_angle(x_start, e_center)
-                    angle_end = self.k_converter.k_to_angle(x_end, e_center)
-                    angle_start_idx = self.dataset.angle_axis.find_nearest_index(angle_start)
-                    angle_end_idx = self.dataset.angle_axis.find_nearest_index(angle_end)
-                except ValueError:
-                    return
-            else:
-                return
-        else:
-            angle_start_idx = self.dataset.angle_axis.find_nearest_index(x_start)
-            angle_end_idx = self.dataset.angle_axis.find_nearest_index(x_end)
-
+        # Energy indices (still useful for ROI object / labels)
         energy_start_idx = self.dataset.energy_axis.find_nearest_index(e_start)
         energy_end_idx = self.dataset.energy_axis.find_nearest_index(e_end)
-
-        # Ensure correct order
-        if angle_start_idx > angle_end_idx:
-            angle_start_idx, angle_end_idx = angle_end_idx, angle_start_idx
         if energy_start_idx > energy_end_idx:
             energy_start_idx, energy_end_idx = energy_end_idx, energy_start_idx
 
-        # Create ROI object
+        if k_params.enabled:
+            # --- Correct spatial image for k-space ROI ---
+            spatial_image = self.dataset.get_spatial_image_kspace_roi(
+                k_start=x_start,
+                k_end=x_end,
+                e_start=e_start,
+                e_end=e_end,
+                zero_angle=k_params.zero_angle,
+                converter=self.k_converter,
+            )
+            self.spatial_viewer.set_image(spatial_image)
+
+            # In k-space mode you already display only energy in title,
+            # so angle indices are not meaningful. Keep ROI object minimal.
+            self.current_roi = EnergyAngleROI(
+                angle_start_idx=0,
+                angle_end_idx=self.dataset.angle_axis.size - 1,
+                energy_start_idx=energy_start_idx,
+                energy_end_idx=energy_end_idx,
+                angle_start=None,
+                angle_end=None,
+                energy_start=float(self.dataset.energy_axis.values[energy_start_idx]),
+                energy_end=float(self.dataset.energy_axis.values[energy_end_idx]),
+            )
+
+            self.arpes_viewer.set_roi_info(self.current_roi, k_space=True)
+            return
+
+        # --- Non-k-space path (your existing logic) ---
+        angle_start_idx = self.dataset.angle_axis.find_nearest_index(x_start)
+        angle_end_idx = self.dataset.angle_axis.find_nearest_index(x_end)
+        if angle_start_idx > angle_end_idx:
+            angle_start_idx, angle_end_idx = angle_end_idx, angle_start_idx
+
         self.current_roi = EnergyAngleROI(
             angle_start_idx=angle_start_idx,
             angle_end_idx=angle_end_idx,
@@ -443,12 +453,10 @@ class MainWindow(QMainWindow):
             energy_end=float(self.dataset.energy_axis.values[energy_end_idx]),
         )
 
-        # Update spatial image
         spatial_image = self.dataset.get_spatial_image(self.current_roi)
         self.spatial_viewer.set_image(spatial_image)
+        self.arpes_viewer.set_roi_info(self.current_roi, k_space=False)
 
-        # Update ARPES viewer title
-        self.arpes_viewer.set_roi_info(self.current_roi, k_space=k_params.enabled)
 
     def _on_kspace_changed(self) -> None:
         """Handle k-space toggle or zero angle change."""
@@ -650,7 +658,7 @@ class MainWindow(QMainWindow):
             f"Center: X={self.current_position.x_coord:.1f}, Y={self.current_position.y_coord:.1f} µm\n"
             f"Region: {nx} × {ny} spatial points\n"
             f"Spectra: {n_angle} × {n_energy} (angle × energy)\n\n"
-            f"Total: {nx}×{ny}×{n_angle}×{n_energy} = {nx * ny * n_angle * n_energy:,} points\n"
+            f"Total: {nx}×{ny}×{n_angle}×{n_energy} = {nx*ny*n_angle*n_energy:,} points\n"
             f"Estimated size: {region_size_mb:.1f} MB"
         )
 
@@ -700,9 +708,9 @@ class MainWindow(QMainWindow):
             x_idx_data_start = max(0, x_idx_data_start)
             x_idx_data_end = min(self.dataset.x_axis.size, x_idx_data_end)
 
-            region_data = self.dataset.intensity[
-                y_start:y_end, x_idx_data_start:x_idx_data_end, :, :
-            ]
+            region_data = self.dataset.intensity[y_start:y_end, x_idx_data_start:x_idx_data_end, :, :]
+            region_data = region_data[:, ::-1, :, :]   # <-- make X increasing to match x_axis_region
+
 
             # Get axis slices
             x_axis_region = self.dataset.x_axis.values[x_start:x_end]
@@ -733,7 +741,7 @@ class MainWindow(QMainWindow):
                 f"Region exported!\n\n"
                 f"File: {Path(filepath).name}\n"
                 f"Size: {size_mb:.1f} MB\n\n"
-                f"Waves: region_4d, spatial_map, axes",
+                f"Waves: region_4d, spatial_map, axes"
             )
 
         except Exception as e:

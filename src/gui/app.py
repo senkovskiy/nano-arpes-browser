@@ -5,7 +5,7 @@ import sys
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QApplication
 
-from .main_window import MainWindow
+from src.gui.main_window import MainWindow
 
 
 def main():
