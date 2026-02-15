@@ -133,7 +133,7 @@ class KSpaceConverter:
         angle_axis: np.ndarray,        # shape (n_angles,)
         zero_angle: float = 0.0,
         n_k_points: int | None = None,
-    interpolation_kind: str = "linear",
+        interpolation_kind: str = "linear",
     ) -> KSpaceResult:
         """
         Convert ARPES spectrum from angle to k-space.
@@ -193,85 +193,7 @@ class KSpaceConverter:
             energy_axis=energy_axis,
             k_min=k_min,
             k_max=k_max,
-        )
-
-    def convert_spectrum_fast(
-        self,
-        spectrum: np.ndarray,
-        energy_axis: np.ndarray,
-        angle_axis: np.ndarray,
-        zero_angle: float = 0.0,
-        n_k_points: int | None = None,
-    ) -> KSpaceResult:
-        """
-        Fast k-space conversion using 2D interpolation.
-
-        This is faster than convert_spectrum() but may have slightly
-        different interpolation behavior at the edges.
-
-        Args:
-            spectrum: 2D array with shape (n_angles, n_energies)
-            energy_axis: Kinetic energy values in eV
-            angle_axis: Angle values in degrees
-            zero_angle: Angle corresponding to k=0
-            n_k_points: Number of k points (default: same as n_angles)
-
-        Returns:
-            KSpaceResult with converted spectrum and k-axis
-        """
-        n_angles, n_energies = spectrum.shape
-
-        if n_k_points is None:
-            n_k_points = n_angles
-
-        angles_shifted = angle_axis - zero_angle
-
-        # Create 2D interpolation function
-        interp2d_func = interpolate.interp2d(
-            angles_shifted,
-            energy_axis,
-            spectrum.T,  # Transpose to (energy, angle)
-            kind="linear",
-            fill_value=0.0,
-        )
-
-        # Determine k range
-        e_max = energy_axis.max()
-        k_min = self.angle_to_k(angles_shifted.min(), e_max)
-        k_max = self.angle_to_k(angles_shifted.max(), e_max)
-        k_axis = np.linspace(k_min, k_max, n_k_points)
-
-        # Allocate result
-        result = np.zeros((n_k_points, n_energies))
-
-        # Process each energy
-        for i_e, energy in enumerate(energy_axis):
-            if energy <= 0:
-                continue
-
-            k_max_at_e = self.max_k_at_energy(energy)
-
-            # Find valid k range
-            valid_k_mask = np.abs(k_axis) <= k_max_at_e
-            valid_k = k_axis[valid_k_mask]
-
-            if len(valid_k) == 0:
-                continue
-
-            # Convert k to angles
-            angles_for_k = self.k_to_angle(valid_k, energy)
-
-            # Interpolate
-            result[valid_k_mask, i_e] = interp2d_func(angles_for_k, energy).flatten()
-
-        return KSpaceResult(
-            spectrum=result,
-            k_axis=k_axis,
-            energy_axis=energy_axis,
-            k_min=float(k_min),
-            k_max=float(k_max),
-        )
-
+        )   
 
 def binding_to_kinetic(
     binding_energy: np.ndarray,

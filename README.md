@@ -152,11 +152,26 @@ uv run nano-arpes-browser
 
 - If your dataset is in binding energy, kinetic energy can be computed if photon energy is known:
 
-\[
-E_{\mathrm{kin}} = h\nu - \phi - E_B
-\]
+  <img src="https://latex.codecogs.com/gif.latex?
+  E_{\mathrm{kin}} = h\nu - \phi - E_B
+  "/>
 
 (currently the GUI focuses on kinetic-energy datasets; metadata plumbing can be extended as needed)
+
+## Linux (Ubuntu/Debian) dependencies
+
+Qt on Linux needs some system libraries for the `xcb` platform plugin.
+
+If you see an error like:
+`Could not load the Qt platform plugin "xcb"...`  
+install:
+
+```bash
+sudo apt update
+sudo apt install -y libxcb-cursor0
+```
+If it still fails, install additional xcb deps: `libxkbcommon-x11-0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-xinerama0, libxcb-xfixes0`.
+
 
 ## TODO
 

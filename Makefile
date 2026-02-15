@@ -35,7 +35,7 @@ test-cov:
 
 # Run the application
 run:
-	uv run python -m src.gui.app
+	uv run nano-arpes-browser
 
 # Build package
 build:

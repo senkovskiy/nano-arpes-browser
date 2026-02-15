@@ -1,7 +1,8 @@
 """Data models for ARPES datasets using Pydantic."""
 
+from typing import Self
 from enum import Enum
-from pathlib import Path
+from pathlibs import Path
 
 import numpy as np
 from pydantic import (
@@ -63,6 +64,15 @@ class AxisInfo(BaseModel):
     def find_nearest_value(self, value: float) -> float:
         """Find nearest value in axis."""
         return float(self.values[self.find_nearest_index(value)])
+    
+    def nearest_slice_exclusive(self, v0: float, v1: float) -> tuple[int, int]:
+        """Return (start, end) indices as a python slice [start:end) based on nearest values."""
+        i0 = self.find_nearest_index(float(v0))
+        i1 = self.find_nearest_index(float(v1))
+        if i0 > i1:
+            i0, i1 = i1, i0
+        end = min(i1 + 1, self.size)  # make end exclusive
+        return i0, max(end, i0 + 1)
 
 
 class SpatialPosition(BaseModel):
@@ -75,32 +85,36 @@ class SpatialPosition(BaseModel):
 
 
 class EnergyAngleROI(BaseModel):
-    """Region of interest in energy-angle space."""
+    """Region of interest in energy-angle space.
+
+    Indexing convention:
+      - start_idx is inclusive
+      - end_idx is exclusive  (Python slicing style)
+    """
 
     angle_start_idx: int = Field(ge=0)
     angle_end_idx: int = Field(ge=0)
     energy_start_idx: int = Field(ge=0)
     energy_end_idx: int = Field(ge=0)
 
-    # Physical values
     angle_start: float | None = None
     angle_end: float | None = None
     energy_start: float | None = None
     energy_end: float | None = None
 
     @model_validator(mode="after")
-    def validate_ranges(self) -> "EnergyAngleROI":
-        """Ensure start <= end for all ranges."""
+    def validate_ranges(self) -> Self:
         if self.angle_start_idx > self.angle_end_idx:
-            self.angle_start_idx, self.angle_end_idx = (
-                self.angle_end_idx,
-                self.angle_start_idx,
-            )
+            self.angle_start_idx, self.angle_end_idx = self.angle_end_idx, self.angle_start_idx
         if self.energy_start_idx > self.energy_end_idx:
-            self.energy_start_idx, self.energy_end_idx = (
-                self.energy_end_idx,
-                self.energy_start_idx,
-            )
+            self.energy_start_idx, self.energy_end_idx = self.energy_end_idx, self.energy_start_idx
+
+        # enforce end-exclusive non-empty ROI
+        if self.angle_end_idx == self.angle_start_idx:
+            self.angle_end_idx += 1
+        if self.energy_end_idx == self.energy_start_idx:
+            self.energy_end_idx += 1
+
         return self
 
 
@@ -353,6 +367,58 @@ class ARPESDataset(BaseModel):
             x_coord=float(self.x_axis.values[x_idx]),
             y_coord=float(self.y_axis.values[y_idx]),
         )
+    
+    def extract_region(
+        self,
+        center: SpatialPosition,
+        integration: IntegrationParams,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Extract a (y, x, angle, energy) region around `center` (display indices).
+
+        Returns region data with X in display order (increasing like x_axis slice),
+        hiding the internal X-reversal convention.
+        """
+        if not integration.enabled:
+            raise ValueError("Integration must be enabled to extract a region")
+
+        x_half = int(integration.x_pixels)
+        y_half = int(integration.y_pixels)
+
+        # Display indices (these correspond to x_axis / y_axis indexing)
+        x_disp = int(center.x_index)
+        y_disp = int(center.y_index)
+
+        # Display-index bounds (end exclusive, python slicing style)
+        x0_disp = max(0, x_disp - x_half)
+        x1_disp = min(self.x_axis.size, x_disp + x_half + 1)
+        y0 = max(0, y_disp - y_half)
+        y1 = min(self.y_axis.size, y_disp + y_half + 1)
+
+        # Axis slices in display order (increasing X)
+        x_axis_region = self.x_axis.values[x0_disp:x1_disp]
+        y_axis_region = self.y_axis.values[y0:y1]
+
+        # Convert display X bounds to internal data X bounds.
+        # Internal storage has X reversed, so a display slice [x0_disp:x1_disp]
+        # maps to data slice [x0_data:x1_data] with x0_data < x1_data, then we flip X.
+        x0_data = self.data_x_index(x1_disp - 1)  # data index at the *right* edge of display slice
+        x1_data = self.data_x_index(x0_disp) + 1  # make end exclusive
+
+        # Ensure proper ordering for slicing
+        if x0_data > x1_data:
+            x0_data, x1_data = x1_data, x0_data
+
+        # Clamp (should already be in range, but keep it safe)
+        x0_data = max(0, x0_data)
+        x1_data = min(self.x_axis.size, x1_data)
+
+        region = self.intensity[y0:y1, x0_data:x1_data, :, :]
+
+        # Flip X so that region[:, 0, ...] corresponds to x_axis_region[0]
+        region = region[:, ::-1, :, :]
+
+        return region, x_axis_region, y_axis_region
 
     # ---------------------------------------------------------------------
     # Energy helpers
@@ -427,8 +493,6 @@ class ARPESDataset(BaseModel):
 
         # Accumulate in (y, x) internal orientation
         accum_yx = np.zeros((self.n_y, self.n_x), dtype=float)
-
-        angles = self.angle_axis.values
 
         for ie in range(e_idx0, e_idx1 + 1):
             ek = float(e_kin[ie])

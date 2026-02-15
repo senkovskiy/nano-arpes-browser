@@ -400,61 +400,47 @@ class MainWindow(QMainWindow):
         if self.dataset is None:
             return
 
+        ds = self.dataset
         k_params = self.control_panel.get_kspace_params()
 
-        # Energy indices (still useful for ROI object / labels)
-        energy_start_idx = self.dataset.energy_axis.find_nearest_index(e_start)
-        energy_end_idx = self.dataset.energy_axis.find_nearest_index(e_end)
-        if energy_start_idx > energy_end_idx:
-            energy_start_idx, energy_end_idx = energy_end_idx, energy_start_idx
+        e0, e1 = ds.energy_axis.nearest_slice_exclusive(e_start, e_end)
 
         if k_params.enabled:
-            # --- Correct spatial image for k-space ROI ---
-            spatial_image = self.dataset.get_spatial_image_kspace_roi(
+            spatial = ds.get_spatial_image_kspace_roi(
                 k_start=x_start,
                 k_end=x_end,
-                e_start=e_start,
-                e_end=e_end,
+                e_start=float(ds.energy_axis.values[e0]),
+                e_end=float(ds.energy_axis.values[e1 - 1]),
                 zero_angle=k_params.zero_angle,
                 converter=self.k_converter,
             )
-            self.spatial_viewer.set_image(spatial_image)
+            self.spatial_viewer.set_image(spatial)
 
-            # In k-space mode you already display only energy in title,
-            # so angle indices are not meaningful. Keep ROI object minimal.
             self.current_roi = EnergyAngleROI(
                 angle_start_idx=0,
-                angle_end_idx=self.dataset.angle_axis.size - 1,
-                energy_start_idx=energy_start_idx,
-                energy_end_idx=energy_end_idx,
-                angle_start=None,
-                angle_end=None,
-                energy_start=float(self.dataset.energy_axis.values[energy_start_idx]),
-                energy_end=float(self.dataset.energy_axis.values[energy_end_idx]),
+                angle_end_idx=ds.angle_axis.size,  # exclusive
+                energy_start_idx=e0,
+                energy_end_idx=e1,                 # exclusive
+                energy_start=float(ds.energy_axis.values[e0]),
+                energy_end=float(ds.energy_axis.values[e1 - 1]),
             )
-
             self.arpes_viewer.set_roi_info(self.current_roi, k_space=True)
             return
 
-        # --- Non-k-space path (your existing logic) ---
-        angle_start_idx = self.dataset.angle_axis.find_nearest_index(x_start)
-        angle_end_idx = self.dataset.angle_axis.find_nearest_index(x_end)
-        if angle_start_idx > angle_end_idx:
-            angle_start_idx, angle_end_idx = angle_end_idx, angle_start_idx
+        a0, a1 = ds.angle_axis.nearest_slice_exclusive(x_start, x_end)
 
         self.current_roi = EnergyAngleROI(
-            angle_start_idx=angle_start_idx,
-            angle_end_idx=angle_end_idx,
-            energy_start_idx=energy_start_idx,
-            energy_end_idx=energy_end_idx,
-            angle_start=float(self.dataset.angle_axis.values[angle_start_idx]),
-            angle_end=float(self.dataset.angle_axis.values[angle_end_idx]),
-            energy_start=float(self.dataset.energy_axis.values[energy_start_idx]),
-            energy_end=float(self.dataset.energy_axis.values[energy_end_idx]),
+            angle_start_idx=a0,
+            angle_end_idx=a1,                      # exclusive
+            energy_start_idx=e0,
+            energy_end_idx=e1,                     # exclusive
+            angle_start=float(ds.angle_axis.values[a0]),
+            angle_end=float(ds.angle_axis.values[a1 - 1]),
+            energy_start=float(ds.energy_axis.values[e0]),
+            energy_end=float(ds.energy_axis.values[e1 - 1]),
         )
 
-        spatial_image = self.dataset.get_spatial_image(self.current_roi)
-        self.spatial_viewer.set_image(spatial_image)
+        self.spatial_viewer.set_image(ds.get_spatial_image(self.current_roi))
         self.arpes_viewer.set_roi_info(self.current_roi, k_space=False)
 
 
@@ -635,22 +621,13 @@ class MainWindow(QMainWindow):
                 self._save_arpes(format="itx")
             return
 
-        # Calculate region bounds
-        x_idx = self.current_position.x_index
-        y_idx = self.current_position.y_index
+        region_data, x_axis_region, y_axis_region = self.dataset.extract_region(
+            self.current_position,
+            integration,
+        )
 
-        x_start = max(0, x_idx - integration.x_pixels)
-        x_end = min(self.dataset.x_axis.size, x_idx + integration.x_pixels + 1)
-        y_start = max(0, y_idx - integration.y_pixels)
-        y_end = min(self.dataset.y_axis.size, y_idx + integration.y_pixels + 1)
-
-        # Region info
-        nx = x_end - x_start
-        ny = y_end - y_start
-        n_angle = self.dataset.angle_axis.size
-        n_energy = self.dataset.energy_axis.size
-
-        region_size_mb = (nx * ny * n_angle * n_energy * 8) / (1024 * 1024)  # float64
+        ny, nx, n_angle, n_energy = region_data.shape
+        region_size_mb = region_data.nbytes / (1024 * 1024)
 
         # Confirm with user
         msg = (
@@ -695,26 +672,15 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
 
         try:
-            # Extract region data
-            # Note: x index is reversed in the data
-            x_idx_data_start = self.dataset.x_axis.size - 1 - (x_idx + integration.x_pixels)
-            x_idx_data_end = self.dataset.x_axis.size - 1 - (x_idx - integration.x_pixels) + 1
+            # Extract region data + axes using the dataset single source of truth
+            region_data, x_axis_region, y_axis_region = self.dataset.extract_region(
+                self.current_position,
+                integration,
+            )
 
-            # Ensure correct order
-            if x_idx_data_start > x_idx_data_end:
-                x_idx_data_start, x_idx_data_end = x_idx_data_end, x_idx_data_start
-
-            # Clamp to valid range
-            x_idx_data_start = max(0, x_idx_data_start)
-            x_idx_data_end = min(self.dataset.x_axis.size, x_idx_data_end)
-
-            region_data = self.dataset.intensity[y_start:y_end, x_idx_data_start:x_idx_data_end, :, :]
-            region_data = region_data[:, ::-1, :, :]   # <-- make X increasing to match x_axis_region
-
-
-            # Get axis slices
-            x_axis_region = self.dataset.x_axis.values[x_start:x_end]
-            y_axis_region = self.dataset.y_axis.values[y_start:y_end]
+            # If you still want nx/ny derived from the returned arrays:
+            nx = len(x_axis_region)
+            ny = len(y_axis_region)
 
             # Save to Igor format
             DataExporter.save_region_itx(
