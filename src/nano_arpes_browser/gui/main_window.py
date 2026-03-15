@@ -657,9 +657,7 @@ class MainWindow(QMainWindow):
         if filepath is None:
             return
 
-        self._show_progress("Exporting region...")
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        QApplication.processEvents()
+        self._start_busy_operation("Exporting region...")
 
         try:
             DataExporter.save_region_itx(
@@ -693,8 +691,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Export Error", f"Failed to save:\n{e}")
         finally:
-            QApplication.restoreOverrideCursor()
-            self._hide_progress()
+            self._finish_busy_operation()
 
 
     def _on_save_full_igor(self) -> None:
@@ -739,9 +736,7 @@ class MainWindow(QMainWindow):
         if filepath is None:
             return
 
-        self._show_progress("Exporting full dataset...")
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        QApplication.processEvents()  # Update UI
+        self._start_busy_operation("Exporting full dataset...")
 
         try:
             result = DataExporter.save_full_dataset_itx(
@@ -778,8 +773,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Export Error", f"Failed to save:\n{e}")
         finally:
-            QApplication.restoreOverrideCursor()
-            self._hide_progress()
+            self._finish_busy_operation()
 
     # =========================================================================
     # View Operations
@@ -899,6 +893,26 @@ class MainWindow(QMainWindow):
     def _hide_progress(self) -> None:
         """Hide progress bar."""
         self.progress_bar.hide()
+
+    def _start_busy_operation(self, message: str) -> None:
+        """
+        Start a long-running operation with UI feedback.
+
+        Shows an indeterminate progress bar, sets the wait cursor, and processes
+        pending events so the UI updates immediately.
+        """
+        self._show_progress(message)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        QApplication.processEvents()
+
+    def _finish_busy_operation(self) -> None:
+        """
+        Finish a long-running operation and restore normal UI state.
+
+        Restores the cursor and hides the progress bar.
+        """
+        QApplication.restoreOverrideCursor()
+        self._hide_progress()
 
     # =========================================================================
     # Window Events
