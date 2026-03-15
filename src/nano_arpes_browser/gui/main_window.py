@@ -499,14 +499,12 @@ class MainWindow(QMainWindow):
         else:
             filter_str = "Igor Text Files (*.itx);;All Files (*)"
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self,
+        filepath = self._get_save_filepath(
             "Save Spatial Image",
             str(Path.home() / base_filename),
             filter_str,
         )
-
-        if not filepath:
+        if filepath is None:
             return
 
         image = self.spatial_viewer.get_current_image()
@@ -551,14 +549,12 @@ class MainWindow(QMainWindow):
         else:
             filter_str = "Igor Text Files (*.itx);;All Files (*)"
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self,
+        filepath = self._get_save_filepath(
             "Save ARPES Spectrum",
             str(Path.home() / base_filename),
             filter_str,
         )
-
-        if not filepath:
+        if filepath is None:
             return
 
         spectrum = self.arpes_viewer.get_current_data()
@@ -653,14 +649,12 @@ class MainWindow(QMainWindow):
             f"{nx}x{ny}.itx"
         )
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self,
+        filepath = self._get_save_filepath(
             "Save Region (Igor Pro)",
             str(Path.home() / default_name),
             "Igor Text Files (*.itx);;All Files (*)",
         )
-
-        if not filepath:
+        if filepath is None:
             return
 
         self._show_progress("Exporting region...")
@@ -737,14 +731,12 @@ class MainWindow(QMainWindow):
         if self.dataset.filepath:
             default_name = self.dataset.filepath.stem + "_full.itx"
 
-        filepath, _ = QFileDialog.getSaveFileName(
-            self,
+        filepath = self._get_save_filepath(
             "Save Full Dataset (Igor Pro)",
             str(Path.home() / default_name),
             "Igor Text Files (*.itx);;All Files (*)",
         )
-
-        if not filepath:
+        if filepath is None:
             return
 
         self._show_progress("Exporting full dataset...")
@@ -852,7 +844,7 @@ class MainWindow(QMainWindow):
             else:
                 self.memory_label.setText(f"Data: {size_mb:.0f} MB")
         else:
-        self.memory_label.setText("")
+            self.memory_label.setText("")
 
     def _require_dataset(self, title: str, message: str) -> bool:
         """
@@ -865,6 +857,25 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, title, message)
             return False
         return True
+
+    def _get_save_filepath(
+        self,
+        title: str,
+        default_path: str,
+        filter_str: str,
+    ) -> Path | None:
+        """
+        Show a save-file dialog and return the selected path, or None if cancelled.
+        """
+        filepath_str, _ = QFileDialog.getSaveFileName(
+            self,
+            title,
+            default_path,
+            filter_str,
+        )
+        if not filepath_str:
+            return None
+        return Path(filepath_str)
 
     def _show_progress(self, message: str = "") -> None:
         """Show progress bar."""
