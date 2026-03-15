@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from src.core.processing.kspace import (
+from nano_arpes_browser.core.processing.kspace import (
     HBAR_SQRT2M,
     KSpaceConverter,
     binding_to_kinetic,

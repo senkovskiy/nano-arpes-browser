@@ -2,7 +2,7 @@
 
 from typing import Self
 from enum import Enum
-from pathlibs import Path
+from pathlib import Path
 
 import numpy as np
 from pydantic import (

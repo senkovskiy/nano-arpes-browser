@@ -14,9 +14,7 @@ The app is designed for fast exploration:
 ## What the app shows
 
 ### Data model
-Internal intensity array shape:
-
-(y, x, angle, energy)
+Internal intensity array shape: (y, x, angle, energy)
 
 
 Display conventions:
@@ -47,9 +45,9 @@ Display conventions:
 ### Angle → k∥ conversion (basic)
 - Convert the spectrum x-axis from emission angle to **k∥** using:
 
-\[
+$
 k_\parallel\,[\mathrm{\AA^{-1}}] = 0.5123167\sqrt{E_\mathrm{kin}\,[\mathrm{eV}]}\,\sin(\theta)
-\]
+$
 
 - The conversion uses a user-adjustable **zero-angle** offset (θ₀) to align k = 0.
 

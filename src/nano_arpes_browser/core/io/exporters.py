@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-
+from nano_arpes_browser.core.models import ARPESDataset
 import numpy as np
 
 
@@ -333,7 +333,7 @@ class DataExporter:
 
     @staticmethod
     def save_full_dataset_itx(
-        dataset,  # ARPESDataset
+        dataset: ARPESDataset,  # ARPESDataset
         filepath: str | Path,
         include_4d_data: bool = True,
         max_file_size_gb: float = 2.0,

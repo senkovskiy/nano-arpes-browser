@@ -1,7 +1,7 @@
 """
 Angle to k-space conversion utilities.
 
-Physics:
+FSSSormulA:
     The parallel component of electron momentum is:
 
     k_∥ = (1/ℏ) * sqrt(2 * m_e * E_kin) * sin(θ)
@@ -22,7 +22,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 
-# Physical constant: sqrt(2 * m_e) / hbar in units of Å⁻¹ / sqrt(eV)
+# Constant: sqrt(2 * m_e) / hbar in units of Å⁻¹ / sqrt(eV)
 HBAR_SQRT2M = 0.512316722
 
 
@@ -219,7 +219,7 @@ def binding_to_kinetic(
 def kinetic_to_binding(
     kinetic_energy: np.ndarray,
     photon_energy: float,
-    work_function: float = 4.5,
+    work_function: float = 4.5, # TODO: put in constants
 ) -> np.ndarray:
     """
     Convert kinetic energy to binding energy.

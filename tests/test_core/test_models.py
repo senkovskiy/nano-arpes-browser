@@ -2,7 +2,7 @@
 
 import numpy as np
 import pytest
-from src.core.models import (
+from nano_arpes_browser.core.models import (
     ARPESDataset,
     AxisInfo,
     IntegrationParams,
