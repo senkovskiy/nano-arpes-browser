@@ -534,8 +534,7 @@ class MainWindow(QMainWindow):
         if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
-        if self.current_position is None:
-            QMessageBox.warning(self, "No Position", "Please select a position first.")
+        if not self._require_position("No Position", "Please select a position first."):
             return
 
         base_filename = DataExporter.generate_arpes_filename(
@@ -592,8 +591,9 @@ class MainWindow(QMainWindow):
         if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
-        if self.current_position is None:
-            QMessageBox.warning(self, "No Position", "Please select a position on the map.")
+        if not self._require_position(
+            "No Position", "Please select a position on the map."
+        ):
             return
 
         # Get integration parameters (defines the region)
@@ -854,6 +854,18 @@ class MainWindow(QMainWindow):
         returns False.
         """
         if self.dataset is None:
+            QMessageBox.warning(self, title, message)
+            return False
+        return True
+
+    def _require_position(self, title: str, message: str) -> bool:
+        """
+        Ensure a spatial position is selected before continuing.
+
+        Returns True if a position is available, otherwise shows a warning and
+        returns False.
+        """
+        if self.current_position is None:
             QMessageBox.warning(self, title, message)
             return False
         return True
