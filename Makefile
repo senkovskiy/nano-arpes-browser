@@ -3,7 +3,7 @@
 
 # Install all dependencies
 install:
-	uv sync --all-extras
+	uv sync --group dev
 
 # Run linter
 lint:
