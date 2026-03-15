@@ -481,8 +481,7 @@ class MainWindow(QMainWindow):
 
     def _save_spatial(self, format: str = "csv") -> None:
         """Save spatial image."""
-        if self.dataset is None:
-            QMessageBox.warning(self, "No Data", "Please load a dataset first.")
+        if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
         # Generate filename
@@ -534,8 +533,7 @@ class MainWindow(QMainWindow):
 
     def _save_arpes(self, format: str = "csv") -> None:
         """Save ARPES spectrum."""
-        if self.dataset is None:
-            QMessageBox.warning(self, "No Data", "Please load a dataset first.")
+        if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
         if self.current_position is None:
@@ -595,8 +593,7 @@ class MainWindow(QMainWindow):
 
     def _on_save_region_igor(self) -> None:
         """Save selected region as Igor .itx (uses integration area)."""
-        if self.dataset is None:
-            QMessageBox.warning(self, "No Data", "Please load a dataset first.")
+        if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
         if self.current_position is None:
@@ -607,7 +604,6 @@ class MainWindow(QMainWindow):
         integration = self.control_panel.get_integration_params()
 
         if not integration.enabled or (integration.x_pixels == 0 and integration.y_pixels == 0):
-            # Ask user to enable integration
             reply = QMessageBox.question(
                 self,
                 "Select Region",
@@ -617,10 +613,10 @@ class MainWindow(QMainWindow):
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply == QMessageBox.StandardButton.Yes:
-                # Export single spectrum
                 self._save_arpes(format="itx")
             return
 
+        # Extract region data ONCE
         region_data, x_axis_region, y_axis_region = self.dataset.extract_region(
             self.current_position,
             integration,
@@ -672,17 +668,6 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
 
         try:
-            # Extract region data + axes using the dataset single source of truth
-            region_data, x_axis_region, y_axis_region = self.dataset.extract_region(
-                self.current_position,
-                integration,
-            )
-
-            # If you still want nx/ny derived from the returned arrays:
-            nx = len(x_axis_region)
-            ny = len(y_axis_region)
-
-            # Save to Igor format
             DataExporter.save_region_itx(
                 region_data,
                 filepath,
@@ -701,13 +686,14 @@ class MainWindow(QMainWindow):
             self._set_status(f"Saved: {Path(filepath).name}")
 
             size_mb = Path(filepath).stat().st_size / (1024 * 1024)
+
             QMessageBox.information(
                 self,
                 "Export Complete",
                 f"Region exported!\n\n"
                 f"File: {Path(filepath).name}\n"
                 f"Size: {size_mb:.1f} MB\n\n"
-                f"Waves: region_4d, spatial_map, axes"
+                f"Waves: region_4d, spatial_map, axes",
             )
 
         except Exception as e:
@@ -716,10 +702,10 @@ class MainWindow(QMainWindow):
             QApplication.restoreOverrideCursor()
             self._hide_progress()
 
+
     def _on_save_full_igor(self) -> None:
         """Save full dataset as Igor .itx."""
-        if self.dataset is None:
-            QMessageBox.warning(self, "No Data", "Please load a dataset first.")
+        if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
         # Calculate size and warn user
@@ -858,14 +844,27 @@ class MainWindow(QMainWindow):
 
     def _update_memory_label(self) -> None:
         """Update memory usage label."""
-        if self.dataset:
+        if self.dataset is not None:
             size_mb = self.dataset.intensity.nbytes / (1024 * 1024)
+
             if size_mb > 1024:
                 self.memory_label.setText(f"Data: {size_mb / 1024:.1f} GB")
             else:
                 self.memory_label.setText(f"Data: {size_mb:.0f} MB")
         else:
-            self.memory_label.setText("")
+        self.memory_label.setText("")
+
+    def _require_dataset(self, title: str, message: str) -> bool:
+        """
+        Ensure a dataset is loaded before continuing.
+
+        Returns True if a dataset is present, otherwise shows a warning and
+        returns False.
+        """
+        if self.dataset is None:
+            QMessageBox.warning(self, title, message)
+            return False
+        return True
 
     def _show_progress(self, message: str = "") -> None:
         """Show progress bar."""
