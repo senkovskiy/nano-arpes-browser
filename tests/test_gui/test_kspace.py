@@ -1,13 +1,32 @@
-"""Tests for k-space conversion."""
+"""Tests for k-space conversion and basic GUI k-space behavior."""
+
+from typing import Generator
 
 import numpy as np
 import pytest
+from PyQt6.QtWidgets import QApplication
+
+from nano_arpes_browser.core.models import (
+    ARPESDataset,
+    AxisInfo,
+    ExperimentalParameters,
+)
 from nano_arpes_browser.core.processing.kspace import (
     HBAR_SQRT2M,
     KSpaceConverter,
     binding_to_kinetic,
     kinetic_to_binding,
 )
+from nano_arpes_browser.gui.main_window import MainWindow
+
+
+@pytest.fixture(scope="module")
+def qapp() -> Generator[QApplication, None, None]:
+    """Ensure a QApplication exists for GUI tests."""
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    yield app
 
 
 class TestKSpaceConverter:
@@ -99,3 +118,96 @@ class TestEnergyConversion:
         e_binding_back = kinetic_to_binding(e_kinetic, hv, wf)
 
         np.testing.assert_allclose(e_binding_back, e_binding_orig)
+
+
+class TestMainWindowKSpaceBehavior:
+    """Basic GUI-level tests for k-space-related interactions."""
+
+    @pytest.fixture
+    def main_window(self, qapp: QApplication) -> MainWindow:
+        """Create a MainWindow with a small synthetic dataset."""
+        # Small synthetic 4D dataset: (y, x, angle, energy)
+        ny, nx, na, ne = 4, 3, 5, 6
+        intensity = np.arange(ny * nx * na * ne, dtype=float).reshape(ny, nx, na, ne)
+
+        x_axis = AxisInfo(values=np.linspace(-1.0, 1.0, nx), unit="µm", label="X")
+        y_axis = AxisInfo(values=np.linspace(-1.0, 1.0, ny), unit="µm", label="Y")
+        angle_axis = AxisInfo(values=np.linspace(-15.0, 15.0, na), unit="°", label="Angle")
+        energy_axis = AxisInfo(values=np.linspace(80.0, 120.0, ne), unit="eV", label="Energy")
+
+        dataset = ARPESDataset(
+            intensity=intensity,
+            x_axis=x_axis,
+            y_axis=y_axis,
+            angle_axis=angle_axis,
+            energy_axis=energy_axis,
+            experiment=ExperimentalParameters(),
+        )
+
+        window = MainWindow()
+        window.dataset = dataset
+        window._initialize_display()
+        yield window
+        window.close()
+
+    def test_select_position_updates_spectrum(self, main_window: MainWindow) -> None:
+        """Selecting a spatial position should update ARPES viewer without errors."""
+        x_center = main_window.dataset.x_axis.values[main_window.dataset.x_axis.size // 2]
+        y_center = main_window.dataset.y_axis.values[main_window.dataset.y_axis.size // 2]
+
+        main_window._on_spatial_position_changed(x_center, y_center)
+
+        spectrum = main_window.arpes_viewer.get_current_data()
+        x_axis, energy_axis = main_window.arpes_viewer.get_current_axes()
+
+        assert main_window.current_position is not None
+        assert spectrum is not None
+        assert x_axis is not None
+        assert energy_axis is not None
+        # Spectrum should be (angle or k, energy)
+        assert spectrum.shape == (main_window.dataset.angle_axis.size, main_window.dataset.energy_axis.size)
+
+    def test_toggle_kspace_refreshes_spectrum(self, main_window: MainWindow) -> None:
+        """Toggling k-space should refresh spectrum and x-axis without raising."""
+        x_center = main_window.dataset.x_axis.values[main_window.dataset.x_axis.size // 2]
+        y_center = main_window.dataset.y_axis.values[main_window.dataset.y_axis.size // 2]
+        main_window._on_spatial_position_changed(x_center, y_center)
+
+        # Initial (angle-space) axes
+        _, energy_axis_before = main_window.arpes_viewer.get_current_axes()
+
+        # Enable k-space via control panel and trigger handler
+        main_window.control_panel.set_zero_checkbox.setChecked(True)
+        main_window.control_panel.k_space_checkbox.setChecked(True)
+        main_window._on_kspace_changed()
+
+        x_axis_k, energy_axis_after = main_window.arpes_viewer.get_current_axes()
+
+        assert x_axis_k is not None
+        assert energy_axis_after is not None
+        # Energy axis should stay the same; x-axis should now be k-like
+        np.testing.assert_allclose(energy_axis_after, energy_axis_before)
+        angle_axis = main_window.dataset.angle_axis.values
+        assert not np.allclose(x_axis_k, angle_axis)
+
+    def test_changing_integration_refreshes_spectrum(self, main_window: MainWindow) -> None:
+        """Changing integration settings should refresh spectrum without errors."""
+        x_center = main_window.dataset.x_axis.values[main_window.dataset.x_axis.size // 2]
+        y_center = main_window.dataset.y_axis.values[main_window.dataset.y_axis.size // 2]
+        main_window._on_spatial_position_changed(x_center, y_center)
+
+        spectrum_before = main_window.arpes_viewer.get_current_data()
+
+        # Enable integration with a small region
+        main_window.control_panel.integrate_checkbox.setChecked(True)
+        main_window.control_panel.x_spinbox.setValue(1)
+        main_window.control_panel.y_spinbox.setValue(1)
+        main_window._on_integration_changed()
+
+        spectrum_after = main_window.arpes_viewer.get_current_data()
+
+        assert spectrum_before is not None
+        assert spectrum_after is not None
+        # Shapes should be unchanged, but data should generally differ
+        assert spectrum_after.shape == spectrum_before.shape
+        assert not np.allclose(spectrum_after, spectrum_before)
