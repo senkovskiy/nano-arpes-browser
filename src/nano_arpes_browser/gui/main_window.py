@@ -337,6 +337,13 @@ class MainWindow(QMainWindow):
         # Create position object
         self.current_position = self.dataset.position_from_coords(x_coord, y_coord)
 
+        self._update_spectrum_for_current_position()
+
+    def _update_spectrum_for_current_position(self) -> None:
+        """Update ARPES spectrum and related UI for the current position."""
+        if self.dataset is None or self.current_position is None:
+            return
+
         # Get integration parameters
         integration = self.control_panel.get_integration_params()
 
@@ -447,10 +454,7 @@ class MainWindow(QMainWindow):
     def _on_kspace_changed(self) -> None:
         """Handle k-space toggle or zero angle change."""
         if self.current_position:
-            self._on_spatial_position_changed(
-                self.current_position.x_coord,
-                self.current_position.y_coord,
-            )
+            self._update_spectrum_for_current_position()
 
         # Show/hide zero line
         k_params = self.control_panel.get_kspace_params()
@@ -464,10 +468,7 @@ class MainWindow(QMainWindow):
     def _on_integration_changed(self) -> None:
         """Handle integration parameter change."""
         if self.current_position:
-            self._on_spatial_position_changed(
-                self.current_position.x_coord,
-                self.current_position.y_coord,
-            )
+            self._update_spectrum_for_current_position()
 
     def _on_display_settings_changed(self) -> None:
         """Handle display settings change."""
