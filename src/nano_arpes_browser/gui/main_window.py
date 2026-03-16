@@ -334,7 +334,6 @@ class MainWindow(QMainWindow):
         if self.dataset is None:
             return
 
-        # Create position object
         self.current_position = self.dataset.position_from_coords(x_coord, y_coord)
 
         self._update_spectrum_for_current_position()
@@ -344,13 +343,10 @@ class MainWindow(QMainWindow):
         if self.dataset is None or self.current_position is None:
             return
 
-        # Get integration parameters
         integration = self.control_panel.get_integration_params()
 
-        # Get spectrum at position
         spectrum = self.dataset.get_spectrum_at(self.current_position, integration)
 
-        # Apply k-space conversion if enabled
         k_params = self.control_panel.get_kspace_params()
 
         if k_params.enabled:
@@ -360,7 +356,6 @@ class MainWindow(QMainWindow):
                 self.dataset.angle_axis.values,
                 zero_angle=k_params.zero_angle,
             )
-            # First set axes, then set data
             self.arpes_viewer.set_axes(
                 result.k_axis,
                 result.energy_axis,
@@ -372,7 +367,6 @@ class MainWindow(QMainWindow):
                 auto_levels=not self.control_panel.is_range_locked(),
             )
         else:
-            # First set axes, then set data
             self.arpes_viewer.set_axes(
                 self.dataset.angle_axis.values,
                 self.dataset.energy_axis.values,
@@ -384,16 +378,13 @@ class MainWindow(QMainWindow):
                 auto_levels=not self.control_panel.is_range_locked(),
             )
 
-        # Update spatial viewer title
         self.spatial_viewer.set_title(
             f"X: {self.current_position.x_coord:.1f} µm, "
             f"Y: {self.current_position.y_coord:.1f} µm"
         )
 
-        # Update status
         self._update_position_label()
 
-        # Update integration rectangle
         if integration.enabled:
             pixel_x = self.dataset.x_axis.step
             pixel_y = self.dataset.y_axis.step
@@ -404,6 +395,7 @@ class MainWindow(QMainWindow):
             self.spatial_viewer.hide_integration_rect()
 
     def _on_roi_changed(self, x_start: float, x_end: float, e_start: float, e_end: float) -> None:
+        """Handle ROI changes in the ARPES viewer."""
         if self.dataset is None:
             return
 
@@ -425,9 +417,9 @@ class MainWindow(QMainWindow):
 
             self.current_roi = EnergyAngleROI(
                 angle_start_idx=0,
-                angle_end_idx=ds.angle_axis.size,  # exclusive
+                angle_end_idx=ds.angle_axis.size,
                 energy_start_idx=e0,
-                energy_end_idx=e1,                 # exclusive
+                energy_end_idx=e1,
                 energy_start=float(ds.energy_axis.values[e0]),
                 energy_end=float(ds.energy_axis.values[e1 - 1]),
             )
@@ -438,9 +430,9 @@ class MainWindow(QMainWindow):
 
         self.current_roi = EnergyAngleROI(
             angle_start_idx=a0,
-            angle_end_idx=a1,                      # exclusive
+            angle_end_idx=a1,
             energy_start_idx=e0,
-            energy_end_idx=e1,                     # exclusive
+            energy_end_idx=e1,
             angle_start=float(ds.angle_axis.values[a0]),
             angle_end=float(ds.angle_axis.values[a1 - 1]),
             energy_start=float(ds.energy_axis.values[e0]),
@@ -449,7 +441,6 @@ class MainWindow(QMainWindow):
 
         self.spatial_viewer.set_image(ds.get_spatial_image(self.current_roi))
         self.arpes_viewer.set_roi_info(self.current_roi, k_space=False)
-
 
     def _on_kspace_changed(self) -> None:
         """Handle k-space toggle or zero angle change."""
@@ -485,7 +476,6 @@ class MainWindow(QMainWindow):
         if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
-        # Generate filename
         if self.current_roi and self.current_roi.angle_start is not None:
             base_filename = DataExporter.generate_spatial_filename(
                 (self.current_roi.angle_start, self.current_roi.angle_end or 0),
@@ -573,15 +563,13 @@ class MainWindow(QMainWindow):
                 else:
                     x_label = f"Angle ({self.dataset.angle_axis.unit})"
 
-                DataExporter.save_itx_with_axes(
+                DataExporter.save_arpes_itx(
                     spectrum,
                     filepath,
-                    wave_name="arpes",
                     x_axis=x_axis,
-                    y_axis=energy_axis,
+                    energy_axis=energy_axis,
                     x_label=x_label,
-                    y_label=f"Energy ({self.dataset.energy_axis.unit})",
-                    z_label="Intensity",
+                    energy_unit=self.dataset.energy_axis.unit,
                 )
             self._set_status(f"Saved: {Path(filepath).name}")
         except Exception as e:
@@ -597,7 +585,6 @@ class MainWindow(QMainWindow):
         ):
             return
 
-        # Get integration parameters (defines the region)
         integration = self.control_panel.get_integration_params()
 
         if not integration.enabled or (integration.x_pixels == 0 and integration.y_pixels == 0):
@@ -613,7 +600,6 @@ class MainWindow(QMainWindow):
                 self._save_arpes(format="itx")
             return
 
-        # Extract region data ONCE
         region_data, x_axis_region, y_axis_region = self.dataset.extract_region(
             self.current_position,
             integration,
@@ -643,7 +629,6 @@ class MainWindow(QMainWindow):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        # Generate filename
         default_name = (
             f"region_X{self.current_position.x_coord:.0f}_"
             f"Y{self.current_position.y_coord:.0f}_"
@@ -694,13 +679,11 @@ class MainWindow(QMainWindow):
         finally:
             self._finish_busy_operation()
 
-
     def _on_save_full_igor(self) -> None:
         """Save full dataset as Igor .itx."""
         if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
-        # Calculate size and warn user
         data_size_gb = self.dataset.intensity.nbytes / (1024**3)
         shape = self.dataset.intensity.shape
 
@@ -842,24 +825,14 @@ class MainWindow(QMainWindow):
             self.memory_label.setText("")
 
     def _require_dataset(self, title: str, message: str) -> bool:
-        """
-        Ensure a dataset is loaded before continuing.
-
-        Returns True if a dataset is present, otherwise shows a warning and
-        returns False.
-        """
+        """Ensure a dataset is loaded before continuing."""
         if self.dataset is None:
             QMessageBox.warning(self, title, message)
             return False
         return True
 
     def _require_position(self, title: str, message: str) -> bool:
-        """
-        Ensure a spatial position is selected before continuing.
-
-        Returns True if a position is available, otherwise shows a warning and
-        returns False.
-        """
+        """Ensure a spatial position is selected before continuing."""
         if self.current_position is None:
             QMessageBox.warning(self, title, message)
             return False
@@ -871,9 +844,7 @@ class MainWindow(QMainWindow):
         default_path: str,
         filter_str: str,
     ) -> Path | None:
-        """
-        Show a save-file dialog and return the selected path, or None if cancelled.
-        """
+        """Show a save-file dialog and return the selected path."""
         filepath_str, _ = QFileDialog.getSaveFileName(
             self,
             title,
@@ -886,7 +857,7 @@ class MainWindow(QMainWindow):
 
     def _show_progress(self, message: str = "") -> None:
         """Show progress bar."""
-        self.progress_bar.setRange(0, 0)  # Indeterminate
+        self.progress_bar.setRange(0, 0)
         self.progress_bar.show()
         if message:
             self._set_status(message)
@@ -896,22 +867,13 @@ class MainWindow(QMainWindow):
         self.progress_bar.hide()
 
     def _start_busy_operation(self, message: str) -> None:
-        """
-        Start a long-running operation with UI feedback.
-
-        Shows an indeterminate progress bar, sets the wait cursor, and processes
-        pending events so the UI updates immediately.
-        """
+        """Start a long-running operation with UI feedback."""
         self._show_progress(message)
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
 
     def _finish_busy_operation(self) -> None:
-        """
-        Finish a long-running operation and restore normal UI state.
-
-        Restores the cursor and hides the progress bar.
-        """
+        """Finish a long-running operation and restore normal UI state."""
         QApplication.restoreOverrideCursor()
         self._hide_progress()
 

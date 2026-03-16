@@ -2,8 +2,10 @@
 
 import re
 from pathlib import Path
-from nano_arpes_browser.core.models import ARPESDataset
+
 import numpy as np
+
+from nano_arpes_browser.core.models import ARPESDataset
 
 
 class DataExporter:
@@ -34,7 +36,7 @@ class DataExporter:
         if name and not name[0].isalpha():
             name = "w" + name
         return name[:31]
-    
+
     @staticmethod
     def _axis_start_delta(axis: np.ndarray | None) -> tuple[float, float] | None:
         """Return (start, delta) for SetScale/P or None if not applicable."""
@@ -268,7 +270,7 @@ class DataExporter:
 
             # --- 4D region data ---
             # incoming `data` is (y, x, angle, energy) and X is already fixed to physical order by caller
-            data_igor = np.transpose(data, (1, 0, 2, 3))  # -> (x, y, angle, energy)
+            data_igor = np.transpose(data, (1, 0, 2, 3))
 
             DataExporter._write_4d_wave(
                 f,
@@ -330,6 +332,28 @@ class DataExporter:
             f.write(f"\t{center_y:.6g}\n")
             f.write("END\n")
             f.write(f'X SetScale d, 0, 0, "{x_unit}", region_center\n')
+
+    @staticmethod
+    def save_arpes_itx(
+        spectrum: np.ndarray,
+        filepath: str | Path,
+        x_axis: np.ndarray,
+        energy_axis: np.ndarray,
+        x_label: str,
+        energy_unit: str,
+        wave_name: str = "arpes",
+    ) -> None:
+        """Save an ARPES spectrum as Igor Pro text with axes."""
+        DataExporter.save_itx_with_axes(
+            spectrum,
+            filepath,
+            wave_name=wave_name,
+            x_axis=x_axis,
+            y_axis=energy_axis,
+            x_label=x_label,
+            y_label=f"Energy ({energy_unit})",
+            z_label="Intensity",
+        )
 
     @staticmethod
     def save_full_dataset_itx(

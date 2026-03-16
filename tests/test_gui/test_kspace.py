@@ -1,6 +1,6 @@
 """Tests for k-space conversion and basic GUI k-space behavior."""
 
-from typing import Generator
+from collections.abc import Generator
 
 import numpy as np
 import pytest
@@ -147,8 +147,7 @@ class TestMainWindowKSpaceBehavior:
         window = MainWindow()
         window.dataset = dataset
         window._initialize_display()
-        yield window
-        window.close()
+        return window
 
     def test_select_position_updates_spectrum(self, main_window: MainWindow) -> None:
         """Selecting a spatial position should update ARPES viewer without errors."""
@@ -165,7 +164,10 @@ class TestMainWindowKSpaceBehavior:
         assert x_axis is not None
         assert energy_axis is not None
         # Spectrum should be (angle or k, energy)
-        assert spectrum.shape == (main_window.dataset.angle_axis.size, main_window.dataset.energy_axis.size)
+        assert spectrum.shape == (
+            main_window.dataset.angle_axis.size,
+            main_window.dataset.energy_axis.size,
+        )
 
     def test_toggle_kspace_refreshes_spectrum(self, main_window: MainWindow) -> None:
         """Toggling k-space should refresh spectrum and x-axis without raising."""

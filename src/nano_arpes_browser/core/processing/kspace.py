@@ -128,9 +128,9 @@ class KSpaceConverter:
 
     def convert_spectrum(
         self,
-        spectrum: np.ndarray,          # shape (n_angles, n_energies)
-        energy_axis: np.ndarray,       # shape (n_energies,)
-        angle_axis: np.ndarray,        # shape (n_angles,)
+        spectrum: np.ndarray,  # shape (n_angles, n_energies)
+        energy_axis: np.ndarray,  # shape (n_energies,)
+        angle_axis: np.ndarray,  # shape (n_angles,)
         zero_angle: float = 0.0,
         n_k_points: int | None = None,
         interpolation_kind: str = "linear",
@@ -193,7 +193,8 @@ class KSpaceConverter:
             energy_axis=energy_axis,
             k_min=k_min,
             k_max=k_max,
-        )   
+        )
+
 
 def binding_to_kinetic(
     binding_energy: np.ndarray,
@@ -219,7 +220,7 @@ def binding_to_kinetic(
 def kinetic_to_binding(
     kinetic_energy: np.ndarray,
     photon_energy: float,
-    work_function: float = 4.5, # TODO: put in constants
+    work_function: float = 4.5,  # TODO: put in constants
 ) -> np.ndarray:
     """
     Convert kinetic energy to binding energy.

@@ -1,8 +1,8 @@
 """Data models for ARPES datasets using Pydantic."""
 
-from typing import Self
 from enum import Enum
 from pathlib import Path
+from typing import Self
 
 import numpy as np
 from pydantic import (
@@ -64,7 +64,7 @@ class AxisInfo(BaseModel):
     def find_nearest_value(self, value: float) -> float:
         """Find nearest value in axis."""
         return float(self.values[self.find_nearest_index(value)])
-    
+
     def nearest_slice_exclusive(self, v0: float, v1: float) -> tuple[int, int]:
         """Return (start, end) indices as a python slice [start:end) based on nearest values."""
         i0 = self.find_nearest_index(float(v0))
@@ -367,7 +367,7 @@ class ARPESDataset(BaseModel):
             x_coord=float(self.x_axis.values[x_idx]),
             y_coord=float(self.y_axis.values[y_idx]),
         )
-    
+
     def extract_region(
         self,
         center: SpatialPosition,
@@ -439,7 +439,7 @@ class ARPESDataset(BaseModel):
         if self.experiment.photon_energy is None:
             raise ValueError("Photon energy required for binding->kinetic conversion")
 
-        return self.experiment.photon_energy - self.experiment.work_function - binding_energy    
+        return self.experiment.photon_energy - self.experiment.work_function - binding_energy
 
     def get_spatial_image_kspace_roi(
         self,

@@ -4,6 +4,7 @@ import sys
 
 from nano_arpes_browser.gui.qt_bootstrap import configure_qt_plugin_paths
 
+
 configure_qt_plugin_paths()
 
 from PyQt6.QtGui import QFont

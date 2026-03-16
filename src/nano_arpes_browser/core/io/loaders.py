@@ -5,7 +5,12 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from nano_arpes_browser.core.models import ARPESDataset, AxisInfo, EnergyType, ExperimentalParameters
+from nano_arpes_browser.core.models import (
+    ARPESDataset,
+    AxisInfo,
+    EnergyType,
+    ExperimentalParameters,
+)
 
 
 class DataLoader:
@@ -80,9 +85,7 @@ class DataLoader:
         y_axis = AxisInfo(values=y_values, unit="µm", label="Y Position")
         angle_axis = AxisInfo(values=angle_values, unit="°", label="Emission Angle")
 
-        energy_label = (
-            "Kinetic Energy" if energy_type == EnergyType.KINETIC else "Binding Energy"
-        )
+        energy_label = "Kinetic Energy" if energy_type == EnergyType.KINETIC else "Binding Energy"
         energy_axis = AxisInfo(values=energy_values, unit="eV", label=energy_label)
 
         # Experimental parameters
@@ -125,4 +128,3 @@ class DataLoader:
             return cls.load_nxs(filepath, **kwargs)
         else:
             raise ValueError(f"Unsupported file format: {suffix}")
-
