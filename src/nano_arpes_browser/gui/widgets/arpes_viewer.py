@@ -220,7 +220,7 @@ class ARPESViewer(QWidget):
         self.plot.autoRange()
 
     def _on_roi_changed(self) -> None:
-        """Handle ROI change."""
+        """Handle ROI changes in the ARPES viewer."""
         if self._x_axis is None or self._energy_axis is None:
             return
 

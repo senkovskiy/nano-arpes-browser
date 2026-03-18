@@ -506,15 +506,13 @@ class MainWindow(QMainWindow):
             if format == "csv":
                 DataExporter.save_csv(image, filepath)
             else:
-                DataExporter.save_itx(
+                DataExporter.save_spatial_itx(
                     image,
                     filepath,
-                    wave_name="spatial_map",
                     x_axis=self.dataset.x_axis.values,
                     y_axis=self.dataset.y_axis.values,
-                    x_label=f"X ({self.dataset.x_axis.unit})",
-                    y_label=f"Y ({self.dataset.y_axis.unit})",
-                    z_label="Intensity",
+                    x_unit=self.dataset.x_axis.unit,
+                    y_unit=self.dataset.y_axis.unit,
                 )
             self._set_status(f"Saved: {Path(filepath).name}")
         except Exception as e:
