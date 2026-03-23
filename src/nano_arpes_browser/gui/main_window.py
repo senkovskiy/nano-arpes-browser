@@ -32,28 +32,23 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # State
         self.dataset: ARPESDataset | None = None
         self.current_position: SpatialPosition | None = None
         self.current_roi: EnergyAngleROI | None = None
         self.k_converter = KSpaceConverter()
         self._dark_theme = True
 
-        # Settings
         self.settings = QSettings("NanoARPES", "Browser")
 
-        # Configure pyqtgraph
         pg_config = get_pyqtgraph_config(dark=True)
         pg.setConfigOptions(**pg_config)
 
-        # Setup
         self._setup_ui()
         self._setup_menu()
         self._setup_statusbar()
         self._connect_signals()
         self._restore_state()
 
-        # Apply theme
         self.setStyleSheet(DARK_THEME)
 
     def _setup_ui(self) -> None:
@@ -61,16 +56,13 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Nano-ARPES Browser")
         self.setMinimumSize(1200, 700)
 
-        # Central widget
         central = QWidget()
         self.setCentralWidget(central)
 
-        # Main horizontal layout
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(8, 8, 8, 8)
         main_layout.setSpacing(8)
 
-        # Left panel: Controls
         left_panel = QWidget()
         left_panel.setFixedWidth(240)
         left_layout = QVBoxLayout(left_panel)
@@ -86,18 +78,14 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(left_panel)
 
-        # Center: Splitter with viewers
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Spatial viewer
         self.spatial_viewer = SpatialViewer()
         self.main_splitter.addWidget(self.spatial_viewer)
 
-        # ARPES viewer
         self.arpes_viewer = ARPESViewer()
         self.main_splitter.addWidget(self.arpes_viewer)
 
-        # Set initial splitter sizes (equal)
         self.main_splitter.setSizes([500, 500])
 
         main_layout.addWidget(self.main_splitter, stretch=1)
@@ -117,10 +105,8 @@ class MainWindow(QMainWindow):
 
         file_menu.addSeparator()
 
-        # --- Export submenu ---
         export_menu = file_menu.addMenu("&Export")
 
-        # Current view exports
         export_menu.addAction("Spatial Map (CSV)...", lambda: self._save_spatial("csv"))
         export_menu.addAction("Spatial Map (Igor)...", lambda: self._save_spatial("itx"))
         export_menu.addSeparator()
@@ -128,15 +114,9 @@ class MainWindow(QMainWindow):
         export_menu.addAction("Spectrum (Igor)...", lambda: self._save_arpes("itx"))
 
         export_menu.addSeparator()
-
-        # Region export
         export_menu.addAction("Selected Region (Igor)...", self._on_save_region_igor)
-
         export_menu.addSeparator()
-
-        # Full dataset
         export_menu.addAction("Full Dataset (Igor)...", self._on_save_full_igor)
-
         file_menu.addSeparator()
 
         exit_action = QAction("E&xit", self)
@@ -154,7 +134,6 @@ class MainWindow(QMainWindow):
 
         view_menu.addSeparator()
 
-        # Theme toggle
         self.theme_action = QAction("&Light Theme", self, checkable=True)
         self.theme_action.triggered.connect(self._toggle_theme)
         view_menu.addAction(self.theme_action)
@@ -171,21 +150,17 @@ class MainWindow(QMainWindow):
         self.statusbar = QStatusBar()
         self.setStatusBar(self.statusbar)
 
-        # Status message (left)
         self.status_label = QLabel("Ready")
         self.statusbar.addWidget(self.status_label, stretch=1)
 
-        # Position info
         self.position_label = QLabel("")
         self.position_label.setMinimumWidth(200)
         self.statusbar.addPermanentWidget(self.position_label)
 
-        # Memory info
         self.memory_label = QLabel("")
         self.memory_label.setMinimumWidth(100)
         self.statusbar.addPermanentWidget(self.memory_label)
 
-        # Progress bar (hidden by default)
         self.progress_bar = QProgressBar()
         self.progress_bar.setMaximumWidth(150)
         self.progress_bar.hide()
@@ -209,17 +184,13 @@ class MainWindow(QMainWindow):
         self.control_panel.export_spectrum_igor_requested.connect(
             lambda: self._save_arpes(format="itx")
         )
-        self.control_panel.export_region_igor_requested.connect(
-            self._on_save_region_igor
-        )
+        self.control_panel.export_region_igor_requested.connect(self._on_save_region_igor)
         self.control_panel.export_full_igor_requested.connect(self._on_save_full_igor)
 
         # Control panel - other
         self.control_panel.k_space_changed.connect(self._on_kspace_changed)
         self.control_panel.integration_changed.connect(self._on_integration_changed)
-        self.control_panel.display_settings_changed.connect(
-            self._on_display_settings_changed
-        )
+        self.control_panel.display_settings_changed.connect(self._on_display_settings_changed)
 
         # Spatial viewer
         self.spatial_viewer.position_changed.connect(self._on_spatial_position_changed)
@@ -378,9 +349,9 @@ class MainWindow(QMainWindow):
                 auto_levels=not self.control_panel.is_range_locked(),
             )
 
-        self.spatial_viewer.set_title(
-            f"X: {self.current_position.x_coord:.1f} µm, "
-            f"Y: {self.current_position.y_coord:.1f} µm"
+        self.spatial_viewer.set_position_title(
+            self.current_position.x_coord,
+            self.current_position.y_coord,
         )
 
         self._update_position_label()
@@ -423,7 +394,13 @@ class MainWindow(QMainWindow):
                 energy_start=float(ds.energy_axis.values[e0]),
                 energy_end=float(ds.energy_axis.values[e1 - 1]),
             )
-            self.arpes_viewer.set_roi_info(self.current_roi, k_space=True)
+            self.arpes_viewer.set_roi_info(
+                None,
+                None,
+                self.current_roi.energy_start,
+                self.current_roi.energy_end,
+                k_space=True,
+            )
             return
 
         a0, a1 = ds.angle_axis.nearest_slice_exclusive(x_start, x_end)
@@ -440,7 +417,13 @@ class MainWindow(QMainWindow):
         )
 
         self.spatial_viewer.set_image(ds.get_spatial_image(self.current_roi))
-        self.arpes_viewer.set_roi_info(self.current_roi, k_space=False)
+        self.arpes_viewer.set_roi_info(
+            self.current_roi.angle_start,
+            self.current_roi.angle_end,
+            self.current_roi.energy_start,
+            self.current_roi.energy_end,
+            k_space=False,
+        )
 
     def _on_kspace_changed(self) -> None:
         """Handle k-space toggle or zero angle change."""
@@ -578,9 +561,7 @@ class MainWindow(QMainWindow):
         if not self._require_dataset("No Data", "Please load a dataset first."):
             return
 
-        if not self._require_position(
-            "No Position", "Please select a position on the map."
-        ):
+        if not self._require_position("No Position", "Please select a position on the map."):
             return
 
         integration = self.control_panel.get_integration_params()
@@ -612,7 +593,7 @@ class MainWindow(QMainWindow):
             f"Center: X={self.current_position.x_coord:.1f}, Y={self.current_position.y_coord:.1f} µm\n"
             f"Region: {nx} × {ny} spatial points\n"
             f"Spectra: {n_angle} × {n_energy} (angle × energy)\n\n"
-            f"Total: {nx}×{ny}×{n_angle}×{n_energy} = {nx*ny*n_angle*n_energy:,} points\n"
+            f"Total: {nx}×{ny}×{n_angle}×{n_energy} = {nx * ny * n_angle * n_energy:,} points\n"
             f"Estimated size: {region_size_mb:.1f} MB"
         )
 

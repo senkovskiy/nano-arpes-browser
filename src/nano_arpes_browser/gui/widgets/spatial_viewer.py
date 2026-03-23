@@ -155,6 +155,10 @@ class SpatialViewer(QWidget):
         """Reset view to show all data."""
         self.plot.autoRange()
 
+    def set_position_title(self, x_coord: float, y_coord: float) -> None:
+        """Set title from the current spatial position."""
+        self.plot.setTitle(f"X: {x_coord:.1f} µm, Y: {y_coord:.1f} µm")
+
     def _on_line_moved(self) -> None:
         """Handle crosshair movement."""
         pos = self.get_position()
