@@ -5,8 +5,6 @@ import pyqtgraph as pg
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
-from nano_arpes_browser.core.models import EnergyAngleROI
-
 
 class ARPESViewer(QWidget):
     """Widget for displaying ARPES spectrum with ROI selection."""
@@ -196,17 +194,29 @@ class ARPESViewer(QWidget):
         """Set plot title."""
         self.plot.setTitle(title)
 
-    def set_roi_info(self, roi: EnergyAngleROI, k_space: bool = False) -> None:
-        """Update title with ROI information."""
-        if roi.angle_start is not None and roi.energy_start is not None:
-            if k_space:
-                title = f"ROI - E: [{roi.energy_start:.2f} : {roi.energy_end:.2f}] eV"
-            else:
-                title = (
-                    f"Angle: [{roi.angle_start:.1f}° : {roi.angle_end:.1f}°], "
-                    f"E: [{roi.energy_start:.2f} : {roi.energy_end:.2f}] eV"
-                )
-            self.plot.setTitle(title)
+    def set_roi_info(
+        self,
+        x_start: float | None,
+        x_end: float | None,
+        energy_start: float | None,
+        energy_end: float | None,
+        k_space: bool = False,
+    ) -> None:
+        """Update plot title with ROI information."""
+        if energy_start is None or energy_end is None:
+            return
+
+        if k_space:
+            title = f"ROI - E: [{energy_start:.2f} : {energy_end:.2f}] eV"
+        else:
+            if x_start is None or x_end is None:
+                return
+            title = (
+                f"Angle: [{x_start:.1f}° : {x_end:.1f}°], "
+                f"E: [{energy_start:.2f} : {energy_end:.2f}] eV"
+            )
+
+        self.plot.setTitle(title)
 
     def set_colormap(self, name: str) -> None:
         """Set colormap by name."""
