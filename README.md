@@ -9,7 +9,7 @@ The app is built for quick inspection: select a point on the spatial map, view
 the local ARPES spectrum, optionally display the spectrum in `k_parallel`, and
 export the map, spectrum, selected 4D region, or full dataset.
 
-![Nano-ARPES Browser screenshot](docs/assets/nano-arpes-browser-screenshot.png)
+![Nano-ARPES Browser screenshot](docs/assets/nano-arpes-browser-screenshot.jpeg)
 
 ## Install
 
