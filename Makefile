@@ -1,5 +1,5 @@
 # Makefile
-.PHONY: install lint lint-fix format typecheck check test test-cov run clean build
+.PHONY: install lint lint-fix format typecheck check test test-cov run clean build package publish verify-install release-check help
 
 # Install all dependencies
 install:
@@ -27,7 +27,7 @@ check: lint typecheck
 
 # Run tests
 test:
-	uv run pytest
+	QT_QPA_PLATFORM=offscreen uv run pytest
 
 # Run tests with coverage
 test-cov:
@@ -41,9 +41,22 @@ run:
 build:
 	uv run python -m build
 
-# Publish to PyPI
+# Clean, build, and validate package artifacts
+package: clean build
+	uv run twine check dist/*
+
+# Run checks expected before a release
+release-check: lint test package
+	git status --short
+
+# Publish existing dist artifacts to PyPI
 publish:
-	uv run twine upload dist/*
+	uv publish dist/*
+
+# Reinstall latest PyPI release as a CLI smoke test
+verify-install:
+	uv tool install nano-arpes-browser --force
+	nano-arpes-browser --help
 
 # Clean build artifacts (cross-platform using Python)
 clean:
@@ -64,10 +77,8 @@ help:
 	@echo "  test-cov  - Run tests with coverage"
 	@echo "  run       - Run the application"
 	@echo "  build     - Build package"
-	@echo "  publish   - Publish to PyPI"
+	@echo "  package   - Clean, build, and validate dist"
+	@echo "  release-check - Run release checks"
+	@echo "  publish   - Publish existing dist to PyPI"
+	@echo "  verify-install - Reinstall from PyPI and run CLI smoke test"
 	@echo "  clean     - Clean build artifacts"
-
-release:
-	rm -rf dist build *.egg-info
-	uv run python -m build
-	uv publish dist/*

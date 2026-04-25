@@ -125,7 +125,7 @@ class TestMainWindowKSpaceBehavior:
     """Basic GUI-level tests for k-space-related interactions."""
 
     @pytest.fixture
-    def main_window(self, qapp: QApplication) -> MainWindow:
+    def main_window(self, qapp: QApplication) -> Generator[MainWindow, None, None]:
         """Create a MainWindow with a small synthetic dataset."""
         # Small synthetic 4D dataset: (y, x, angle, energy)
         ny, nx, na, ne = 4, 3, 5, 6
@@ -148,7 +148,10 @@ class TestMainWindowKSpaceBehavior:
         window = MainWindow()
         window.dataset = dataset
         window._initialize_display()
-        return window
+        yield window
+        window.hide()
+        window.deleteLater()
+        qapp.processEvents()
 
     def test_select_position_updates_spectrum(self, main_window: MainWindow) -> None:
         """Selecting a spatial position should update ARPES viewer without errors."""
