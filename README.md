@@ -1,189 +1,134 @@
 # Nano-ARPES Browser
 
-A lightweight GUI application for browsing and exporting **nano-/micro-ARPES 4D datasets**
-(spatial map + spectra) acquired at synchrotron nano-ARPES beamlines (currently: **ANTARES / SOLEIL** `.nxs`).
+A lightweight PyQt application for browsing and exporting **nano-/micro-ARPES 4D
+datasets** from synchrotron beamlines. Current file support is focused on
+**ANTARES / SOLEIL NeXus-HDF5** data with the expected
+`salsaentry_1/scan_data/...` layout.
 
-The app is designed for fast exploration:
-- choose a point (or small region) on the spatial map
-- inspect the local ARPES spectrum
-- optionally view the spectrum in **k∥**
-- export exactly what you need (map / spectrum / selected 4D region / full dataset)
+The app is built for quick inspection: select a point on the spatial map, view
+the local ARPES spectrum, optionally display the spectrum in `k_parallel`, and
+export the map, spectrum, selected 4D region, or full dataset.
 
----
+![Nano-ARPES Browser screenshot](docs/assets/nano-arpes-browser-screenshot.png)
 
-## What the app shows
+## Install
 
-### Data model
-Internal intensity array shape: (y, x, angle, energy)
+For regular use, install from PyPI:
 
+```bash
+pip install nano-arpes-browser
+nano-arpes-browser
+```
 
-Display conventions:
-- The spatial image is computed as: `rot90(sum over angle & energy)` for convenient orientation.
-- The raw beamline X index is reversed internally; the app converts between **display X** and **data X** consistently.
+With `uv`:
 
-### Main views
-- **Spatial Map (left)**  
-  Integrated intensity over the current spectral window (full range by default, or ROI-selected).
-- **ARPES Spectrum (right)**  
-  Spectrum at the selected spatial position (optionally integrated over a small spatial box).
+```bash
+uv tool install nano-arpes-browser
+nano-arpes-browser
+```
 
----
+Requires Python 3.10 or newer.
+
+## Main Workflow
+
+1. Open an ANTARES / SOLEIL `.nxs`, `.h5`, or `.hdf5` file.
+2. Use the crosshair on the spatial map to choose a position.
+3. Inspect the corresponding angle-energy ARPES spectrum.
+4. Optionally enable spatial integration or k-space display.
+5. Export the current map, current spectrum, selected region, or full dataset.
+
+## What the App Shows
+
+Internal data shape is:
+
+```text
+(y, x, angle, energy)
+```
+
+The spatial image is displayed as `rot90(sum over angle and energy)`. The raw
+ANTARES X index is reversed internally; conversion between display X and data X
+is handled by the dataset model.
+
+Main views:
+
+- **Spatial Map**: integrated intensity over the full spectrum or selected ROI.
+- **ARPES Spectrum**: spectrum at the selected point or integrated spatial box.
 
 ## Features
 
-### Interactive browsing
-- Click/drag the crosshair in the spatial map to select a position.
-- View the corresponding ARPES spectrum (angle × energy).
-- Optional spatial integration: sum spectra in a rectangle around the current position.
+- Interactive spatial map crosshair.
+- ARPES spectrum viewer with rectangular ROI selection.
+- ROI-based spatial map updates in angle-energy or k-energy mode.
+- Optional spatial integration around the current position.
+- Basic angle to `k_parallel` conversion.
+- CSV and Igor Pro `.itx` export paths.
 
-### ROI-based spectral filtering
-- Draw a rectangular ROI in the spectrum view:
-  - In **Angle mode**: ROI is (angle, energy)
-  - In **k-space mode**: ROI is (k, energy)
-- The spatial map updates to show intensity integrated in the selected ROI.
+## Export Options
 
-### Angle → k∥ conversion (basic)
-- Convert the spectrum x-axis from emission angle to **k∥** using:
+- **Spatial Map**: current displayed map as `.csv` or Igor `.itx`.
+- **Spectrum**: current displayed spectrum as `.csv` or Igor `.itx`.
+- **Selected Region**: compact Igor `.itx` export of a spatial subset, including
+  `region_4d`, `region_spatial`, `region_spectrum`, axes, and center position.
+- **Full Dataset**: Igor `.itx` export of the full cube and axes. Use only when
+  you need the entire dataset.
 
-$
-k_\parallel\,[\mathrm{\AA^{-1}}] = 0.5123167\sqrt{E_\mathrm{kin}\,[\mathrm{eV}]}\,\sin(\theta)
-$
+## Physics Notes
 
-- The conversion uses a user-adjustable **zero-angle** offset (θ₀) to align k = 0.
+K-space display uses the simple 1D relation:
 
-> Note: current implementation assumes a simple geometry (no analyzer/sample tilt terms).
-> See **TODO** for planned improvements.
+```text
+k_parallel [A^-1] = 0.5123167 * sqrt(E_kin [eV]) * sin(theta)
+```
 
----
+The zero-angle offset can be adjusted in the GUI. Full geometry correction,
+including sample/analyzer tilt, is not yet included.
 
-## Export
+## Supported Data
 
-Exports are available from the **Export** menu/button and are aimed at keeping files small when needed.
+Currently supported loader:
 
-### 1) Spatial Map export
-Exports the **currently displayed** spatial image (after ROI / k-space ROI integration).
+- ANTARES / SOLEIL NeXus-HDF5 files with `salsaentry_1/scan_data/...` paths.
 
-- **CSV (`.csv`)**: raw 2D array
-- **Igor Pro (`.itx`)**: 2D wave with axis scaling
+If another beamline or HDF5 convention is needed, include the file tree, axis
+metadata locations, and geometry assumptions when opening an issue.
 
-Typical use:
-- quick sharing
-- external plotting
-- feeding into other analysis scripts
-
-### 2) Spectrum export
-Exports the **currently displayed** spectrum at the selected position (or integrated region).
-
-- **CSV (`.csv`)**: raw 2D array (x × energy)
-- **Igor Pro (`.itx`)**: 2D wave + separate axis waves
-
-Notes:
-- In k-space mode the x-axis is `k∥ (Å⁻¹)`
-- Otherwise the x-axis is emission angle (deg)
-
-### 3) Selected Region export (Igor `.itx`) — recommended for saving space
-This export is intended to **avoid huge full-dataset files**.
-
-It writes:
-- `region_4d`: the selected 4D cube (X × Y × angle × energy) for the chosen spatial region
-- `region_spatial`: integrated spatial map of that region
-- `region_spectrum`: integrated spectrum of that region
-- `region_x`, `region_y`, `region_angle`, `region_energy`: axis waves
-- `region_center`: (center_x, center_y)
-
-How the region is chosen:
-- enable **Spatial Integration**
-- set X/Y pixels (half-widths around the current position)
-- choose **Export → Selected Region (Igor .itx)**
-
-This is the best workflow when:
-- you want to analyze a subset in Igor Pro
-- you want to archive/share only the interesting part of the measurement
-
-### 4) Full Dataset export (Igor `.itx`)
-Exports the full dataset and axes.
-
-Creates:
-- `arpes_4d` (optional, can be large)
-- `spatial_map`
-- `x_spatial`, `y_spatial`, `angle_axis`, `energy_axis`
-
-Use this only when you truly need the entire cube in Igor.
-
----
-
-## Supported input formats
-
-### ANTARES / SOLEIL NeXus (`.nxs`)
-Currently supported loader: `DataLoader.load_nxs()`.
-
-If you want support for additional beamlines/formats, open an issue and attach:
-- the file structure (HDF5 tree)
-- axis metadata location
-- any rotation / instrument geometry fields you rely on
-
----
-
-## Installation (development)
+## Development
 
 ```bash
 git clone https://github.com/senkovskiy/nano-arpes-browser
 cd nano-arpes-browser
-
-# Install dependencies (requires uv)
 make install
-
-# Run
 make run
 ```
-Alternative (without Makefile):
+
+Useful commands:
 
 ```bash
-uv sync --all-extras
-uv run nano-arpes-browser
+make test      # run pytest
+make lint      # run Ruff
+make format    # format with Ruff
+make typecheck # run mypy
+make build     # build package
 ```
----
 
-## Notes on k-space conversion
+## Documentation
 
-- The app converts angle → k∥ using kinetic energy.
+- Architecture and data-flow diagrams:
+  [docs/ARCHITECTURE_DIAGRAM.md](docs/ARCHITECTURE_DIAGRAM.md)
+- Contributor guide: [AGENTS.md](AGENTS.md)
 
-- If your dataset is in binding energy, kinetic energy can be computed if photon energy is known:
+## Linux Notes
 
-  <img src="https://latex.codecogs.com/gif.latex?
-  E_{\mathrm{kin}} = h\nu - \phi - E_B
-  "/>
-
-(currently the GUI focuses on kinetic-energy datasets; metadata plumbing can be extended as needed)
-
-## Linux (Ubuntu/Debian) dependencies
-
-Qt on Linux needs some system libraries for the `xcb` platform plugin.
-
-If you see an error like:
-`Could not load the Qt platform plugin "xcb"...`  
-install:
+Qt on Linux may require the `xcb` platform plugin dependencies:
 
 ```bash
 sudo apt update
 sudo apt install -y libxcb-cursor0
 ```
-If it still fails, install additional xcb deps: `libxkbcommon-x11-0, libxcb-icccm4, libxcb-image0, libxcb-keysyms1, libxcb-randr0, libxcb-render-util0, libxcb-xinerama0, libxcb-xfixes0`.
 
-
-## TODO
-
-- **Tilt / geometry correction for k-space conversion**
-    Include sample/analyzer tilt (τ) and mapping geometry so that “k along the slit” remains correct when τ ≠ 0.
-
-- Add photon energy entry in GUI (enables binding↔kinetic conversion workflows)
-
-- Improve fast k-space conversion path (and/or remove unused convert_spectrum_fast)
-
-- More importers (other beamlines / HDF5 conventions)
-
-- Performance: optional memory-mapped IO / chunked processing for very large datasets
+If Qt still fails to start, also install:
+`libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0`.
 
 ## License
 
-MIT (see ``pyproject.toml``).
+MIT. See `pyproject.toml`.
