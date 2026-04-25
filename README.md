@@ -115,7 +115,6 @@ make build     # build package
 
 - Architecture and data-flow diagrams:
   [docs/ARCHITECTURE_DIAGRAM.md](docs/ARCHITECTURE_DIAGRAM.md)
-- Contributor guide: [AGENTS.md](AGENTS.md)
 
 ## Linux Notes
 
