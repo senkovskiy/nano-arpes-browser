@@ -27,6 +27,22 @@ class DataLoader:
         "angle_offset": "salsaentry_1/scan_data/data_07",
         "angle_step": "salsaentry_1/scan_data/data_08",
     }
+    HDF5_SUFFIXES: ClassVar[set[str]] = {".nxs", ".hdf5", ".h5"}
+
+    @classmethod
+    def _validate_antares_schema(cls, h5_file: h5py.File, filepath: Path) -> None:
+        """Validate the ANTARES schema of the HDF5/NeXus file."""
+        missing = [path for path in cls.ANTARES_PATHS.values() if path not in h5_file]
+        if not missing:
+            return
+
+        message = (
+            f"Unsupported HDF5/NeXus schema for {filepath.name}. "
+            "Expected ANTARES/SOLEIL nano-ARPES layout. "
+            f"Missing: {', '.join(missing)}. "
+            "Inspect the file's HDF5 tree and compare it with DataLoader.ANTARES_PATHS."
+        )
+        raise ValueError(message)
 
     @classmethod
     def load_nxs(
@@ -48,7 +64,14 @@ class DataLoader:
         """
         filepath = Path(filepath)
 
-        with h5py.File(filepath, "r") as f:
+        try:
+            h5_file = h5py.File(filepath, "r")
+        except OSError as e:
+            raise ValueError(f"Could not read HDF5/NeXus file {filepath.name}: {e}") from e
+
+        with h5_file as f:
+            cls._validate_antares_schema(f, filepath)
+
             # Load intensity data - reverse angle axis to get ascending angles
             intensity = np.array(f[cls.ANTARES_PATHS["data"]])[:, :, ::-1, :]
 
@@ -123,7 +146,7 @@ class DataLoader:
         filepath = Path(filepath)
         suffix = filepath.suffix.lower()
 
-        if suffix in (".nxs", ".hdf5", ".h5"):
-            return cls.load_nxs(filepath, **kwargs)
-        else:
+        if suffix not in cls.HDF5_SUFFIXES:
             raise ValueError(f"Unsupported file format: {suffix}")
+
+        return cls.load_nxs(filepath, **kwargs)
