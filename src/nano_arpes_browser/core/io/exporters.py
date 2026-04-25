@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from nano_arpes_browser.core.io.export_models import RegionExportData
 from nano_arpes_browser.core.models import ARPESDataset
 
 
@@ -239,29 +240,15 @@ class DataExporter:
 
     @staticmethod
     def save_region_itx(
-        data: np.ndarray,
+        region: RegionExportData,
         filepath: str | Path,
-        x_axis: np.ndarray,
-        y_axis: np.ndarray,
-        angle_axis: np.ndarray,
-        energy_axis: np.ndarray,
-        x_unit: str = "µm",
-        y_unit: str = "µm",
-        angle_unit: str = "°",
-        energy_unit: str = "eV",
-        center_x: float = 0,
-        center_y: float = 0,
     ) -> None:
         """
         Export a selected region of the 4D dataset to Igor Pro format.
 
         Args:
-            data: 4D array (y, x, angle, energy)
+            region: Region export payload
             filepath: Output path
-            x_axis, y_axis: Spatial axes for the region
-            angle_axis, energy_axis: Spectral axes
-            x_unit, y_unit, angle_unit, energy_unit: Axis units
-            center_x, center_y: Center position of the region
         """
         filepath = Path(filepath)
 
@@ -270,68 +257,71 @@ class DataExporter:
 
             # --- 4D region data ---
             # incoming `data` is (y, x, angle, energy) and X is already fixed to physical order by caller
-            data_igor = np.transpose(data, (1, 0, 2, 3))  # -> (x, y, angle, energy)
+            data_igor = np.transpose(region.data, (1, 0, 2, 3))  # -> (x, y, angle, energy)
 
             DataExporter._write_4d_wave(
                 f,
                 "region_4d",
                 data_igor,
-                dim0_axis=x_axis,
-                dim1_axis=y_axis,
-                dim2_axis=angle_axis,
-                dim3_axis=energy_axis,
-                dim0_label=f"X ({x_unit})",
-                dim1_label=f"Y ({y_unit})",
-                dim2_label=f"Angle ({angle_unit})",
-                dim3_label=f"Energy ({energy_unit})",
+                dim0_axis=region.x_axis,
+                dim1_axis=region.y_axis,
+                dim2_axis=region.angle_axis,
+                dim3_axis=region.energy_axis,
+                dim0_label=f"X ({region.x_unit})",
+                dim1_label=f"Y ({region.y_unit})",
+                dim2_label=f"Angle ({region.angle_unit})",
+                dim3_label=f"Energy ({region.energy_unit})",
             )
             f.write("\n")
 
             # --- Integrated spatial map of region ---
-            spatial_map = np.rot90(np.sum(data, axis=(2, 3)))
             DataExporter._write_2d_wave(
                 f,
                 "region_spatial",
-                spatial_map,
-                x_axis=x_axis,
-                y_axis=y_axis,
-                x_label=f"X ({x_unit})",
-                y_label=f"Y ({y_unit})",
+                region.spatial_map,
+                x_axis=region.x_axis,
+                y_axis=region.y_axis,
+                x_label=f"X ({region.x_unit})",
+                y_label=f"Y ({region.y_unit})",
                 z_label="Intensity",
             )
             f.write("\n")
 
             # --- Integrated spectrum of entire region ---
-            integrated_spectrum = np.sum(data, axis=(0, 1))
+            integrated_spectrum = np.sum(region.data, axis=(0, 1))
             DataExporter._write_2d_wave(
                 f,
                 "region_spectrum",
                 integrated_spectrum,
-                x_axis=angle_axis,
-                y_axis=energy_axis,
-                x_label=f"Angle ({angle_unit})",
-                y_label=f"Energy ({energy_unit})",
+                x_axis=region.angle_axis,
+                y_axis=region.energy_axis,
+                x_label=f"Angle ({region.angle_unit})",
+                y_label=f"Energy ({region.energy_unit})",
                 z_label="Intensity",
             )
             f.write("\n")
 
             # --- Axis waves ---
-            DataExporter._write_1d_wave(f, "region_x", x_axis, label=x_unit)
+            DataExporter._write_1d_wave(f, "region_x", region.x_axis, label=region.x_unit)
             f.write("\n")
-            DataExporter._write_1d_wave(f, "region_y", y_axis, label=y_unit)
+            DataExporter._write_1d_wave(f, "region_y", region.y_axis, label=region.y_unit)
             f.write("\n")
-            DataExporter._write_1d_wave(f, "region_angle", angle_axis, label=angle_unit)
+            DataExporter._write_1d_wave(
+                f, "region_angle", region.angle_axis, label=region.angle_unit
+            )
             f.write("\n")
-            DataExporter._write_1d_wave(f, "region_energy", energy_axis, label=energy_unit)
+            DataExporter._write_1d_wave(
+                f, "region_energy", region.energy_axis, label=region.energy_unit
+            )
             f.write("\n")
 
             # --- Center position ---
             f.write("WAVES/N=(2)/D region_center\n")
             f.write("BEGIN\n")
-            f.write(f"\t{center_x:.6g}\n")
-            f.write(f"\t{center_y:.6g}\n")
+            f.write(f"\t{region.center_x:.6g}\n")
+            f.write(f"\t{region.center_y:.6g}\n")
             f.write("END\n")
-            f.write(f'X SetScale d, 0, 0, "{x_unit}", region_center\n')
+            f.write(f'X SetScale d, 0, 0, "{region.x_unit}", region_center\n')
 
     @staticmethod
     def save_arpes_itx(

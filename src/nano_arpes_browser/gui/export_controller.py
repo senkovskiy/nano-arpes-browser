@@ -5,7 +5,7 @@ from typing import Any
 
 from PyQt6.QtWidgets import QMessageBox
 
-from nano_arpes_browser.core.io import DataExporter
+from nano_arpes_browser.core.io import DataExporter, RegionExportData
 
 
 class ExportController:
@@ -146,6 +146,7 @@ class ExportController:
             window.current_position,
             integration,
         )
+        spatial_map = window.dataset.spatial_image_for_selection(region_data)
 
         ny, nx, n_angle, n_energy = region_data.shape
         region_size_mb = region_data.nbytes / (1024 * 1024)
@@ -189,9 +190,9 @@ class ExportController:
         window._start_busy_operation("Exporting region...")
 
         try:
-            DataExporter.save_region_itx(
-                region_data,
-                filepath,
+            region_export = RegionExportData(
+                data=region_data,
+                spatial_map=spatial_map,
                 x_axis=x_axis_region,
                 y_axis=y_axis_region,
                 angle_axis=window.dataset.angle_axis.values,
@@ -203,6 +204,7 @@ class ExportController:
                 center_x=window.current_position.x_coord,
                 center_y=window.current_position.y_coord,
             )
+            DataExporter.save_region_itx(region_export, filepath)
 
             window._set_status(f"Saved: {Path(filepath).name}")
 
