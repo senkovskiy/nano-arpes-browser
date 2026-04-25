@@ -1,6 +1,6 @@
 [project]
 name = "nano-arpes-browser"
-version = "0.1.4"
+version = "0.2"
 description = "nano-ARPES data browser and analysis tool"
 readme = "README.md"
 requires-python = ">=3.10"
