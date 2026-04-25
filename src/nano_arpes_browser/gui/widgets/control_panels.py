@@ -249,6 +249,7 @@ class ControlPanel(QWidget):
 
     def _on_kspace_toggled(self, checked: bool) -> None:
         """Handle k-space checkbox toggle."""
+        _ = checked
         self.k_space_changed.emit()
 
     def _on_integrate_toggled(self, checked: bool) -> None:
@@ -349,21 +350,21 @@ class InfoPanel(QWidget):
             self.filename_label.setText("📁 Unknown")
 
         self.shape_label.setText(
-            f"📐 {dataset.shape[1]}×{dataset.shape[0]} spatial, "
-            f"{dataset.shape[2]}×{dataset.shape[3]} spectral"
+            f"📐 {dataset.shape[1]}x{dataset.shape[0]} spatial, "
+            f"{dataset.shape[2]}x{dataset.shape[3]} spectral"
         )
 
         self.spatial_label.setText(
-            f"🗺️ X: {dataset.x_axis.min:.1f}–{dataset.x_axis.max:.1f} {dataset.x_axis.unit}\n"
-            f"    Y: {dataset.y_axis.min:.1f}–{dataset.y_axis.max:.1f} {dataset.y_axis.unit}"
+            f"🗺️ X: {dataset.x_axis.min:.1f}-{dataset.x_axis.max:.1f} {dataset.x_axis.unit}\n"
+            f"    Y: {dataset.y_axis.min:.1f}-{dataset.y_axis.max:.1f} {dataset.y_axis.unit}"
         )
 
         self.energy_label.setText(
-            f"⚡ E: {dataset.energy_axis.min:.2f}–{dataset.energy_axis.max:.2f} {dataset.energy_axis.unit}"
+            f"⚡ E: {dataset.energy_axis.min:.2f}-{dataset.energy_axis.max:.2f} {dataset.energy_axis.unit}"
         )
 
         self.angle_label.setText(
-            f"📐 θ: {dataset.angle_axis.min:.1f}–{dataset.angle_axis.max:.1f}{dataset.angle_axis.unit}"
+            f"📐 θ: {dataset.angle_axis.min:.1f}-{dataset.angle_axis.max:.1f}{dataset.angle_axis.unit}"
         )
 
     def clear(self) -> None:

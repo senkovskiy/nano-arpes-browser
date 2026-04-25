@@ -83,7 +83,8 @@ class TestKSpaceConverter:
     def test_convert_spectrum_preserves_shape(self, converter):
         """Converted spectrum should have correct shape."""
         n_angles, n_energies = 100, 50
-        spectrum = np.random.rand(n_angles, n_energies)
+        rng = np.random.default_rng(0)
+        spectrum = rng.random((n_angles, n_energies))
         energy_axis = np.linspace(80, 120, n_energies)
         angle_axis = np.linspace(-15, 15, n_angles)
 
@@ -99,7 +100,7 @@ class TestEnergyConversion:
 
     def test_binding_to_kinetic(self):
         """Test binding to kinetic energy conversion."""
-        # E_B = 0 should give E_kin = hν - φ
+        # E_B = 0 should give E_kin = hv - phi
         e_kin = binding_to_kinetic(np.array([0.0]), photon_energy=100.0, work_function=4.5)
         assert e_kin[0] == pytest.approx(95.5)
 

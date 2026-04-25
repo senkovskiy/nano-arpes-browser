@@ -180,7 +180,7 @@ class DataExporter:
         filepath = Path(filepath)
         wave_name = DataExporter._sanitize_igor_name(wave_name)
 
-        with open(filepath, "w", newline="\n") as f:
+        with filepath.open("w", newline="\n") as f:
             f.write("IGOR\n")
 
             DataExporter._write_2d_wave(
@@ -213,7 +213,7 @@ class DataExporter:
         filepath = Path(filepath)
         wave_name = DataExporter._sanitize_igor_name(wave_name)
 
-        with open(filepath, "w", newline="\n") as f:
+        with filepath.open("w", newline="\n") as f:
             f.write("IGOR\n")
 
             # Main data wave
@@ -265,12 +265,12 @@ class DataExporter:
         """
         filepath = Path(filepath)
 
-        with open(filepath, "w", newline="\n") as f:
+        with filepath.open("w", newline="\n") as f:
             f.write("IGOR\n")
 
             # --- 4D region data ---
             # incoming `data` is (y, x, angle, energy) and X is already fixed to physical order by caller
-            data_igor = np.transpose(data, (1, 0, 2, 3))
+            data_igor = np.transpose(data, (1, 0, 2, 3))  # -> (x, y, angle, energy)
 
             DataExporter._write_4d_wave(
                 f,
@@ -357,7 +357,7 @@ class DataExporter:
 
     @staticmethod
     def save_full_dataset_itx(
-        dataset: ARPESDataset,  # ARPESDataset
+        dataset: ARPESDataset,
         filepath: str | Path,
         include_4d_data: bool = True,
         max_file_size_gb: float = 2.0,
@@ -390,7 +390,7 @@ class DataExporter:
         data_size_gb = dataset.intensity.nbytes / (1024**3)
         will_include_4d = include_4d_data and (data_size_gb <= max_file_size_gb)
 
-        with open(filepath, "w", newline="\n") as f:
+        with filepath.open("w", newline="\n") as f:
             f.write("IGOR\n")
 
             # --- Full 4D data ---
@@ -450,6 +450,28 @@ class DataExporter:
             "data_size_gb": data_size_gb,
             "shape": dataset.intensity.shape,
         }
+
+    @staticmethod
+    def save_spatial_itx(
+        image: np.ndarray,
+        filepath: str | Path,
+        x_axis: np.ndarray,
+        y_axis: np.ndarray,
+        x_unit: str,
+        y_unit: str,
+        wave_name: str = "spatial_map",
+    ) -> None:
+        """Save a spatial map as Igor Pro text."""
+        DataExporter.save_itx(
+            image,
+            filepath,
+            wave_name=wave_name,
+            x_axis=x_axis,
+            y_axis=y_axis,
+            x_label=f"X ({x_unit})",
+            y_label=f"Y ({y_unit})",
+            z_label="Intensity",
+        )
 
     # ========================================================================
     # Filename Generation

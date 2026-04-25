@@ -1,5 +1,7 @@
 """Spatial map viewer widget."""
 
+from contextlib import suppress
+
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import QRectF, pyqtSignal
@@ -146,10 +148,8 @@ class SpatialViewer(QWidget):
 
     def set_colormap(self, name: str) -> None:
         """Set colormap by name."""
-        try:
+        with suppress(Exception):
             self.histogram.gradient.loadPreset(name)
-        except Exception:
-            pass  # Ignore invalid colormap names
 
     def auto_range(self) -> None:
         """Reset view to show all data."""

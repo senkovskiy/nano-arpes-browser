@@ -7,10 +7,10 @@ from nano_arpes_browser.gui.qt_bootstrap import configure_qt_plugin_paths
 
 configure_qt_plugin_paths()
 
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QFont  # noqa: E402
+from PyQt6.QtWidgets import QApplication  # noqa: E402
 
-from nano_arpes_browser.gui.main_window import MainWindow
+from nano_arpes_browser.gui.main_window import MainWindow  # noqa: E402
 
 
 def main() -> None:

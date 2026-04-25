@@ -204,7 +204,7 @@ def binding_to_kinetic(
     """
     Convert binding energy to kinetic energy.
 
-    E_kin = hν - φ - E_B
+    E_kin = hv - phi - E_B
 
     Args:
         binding_energy: Binding energy in eV (positive values = below Fermi)
@@ -225,7 +225,7 @@ def kinetic_to_binding(
     """
     Convert kinetic energy to binding energy.
 
-    E_B = hν - φ - E_kin
+    E_B = hv - phi - E_kin
 
     Args:
         kinetic_energy: Kinetic energy in eV

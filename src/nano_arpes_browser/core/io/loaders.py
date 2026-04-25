@@ -1,6 +1,7 @@
 """File loaders for ARPES data formats."""
 
 from pathlib import Path
+from typing import ClassVar
 
 import h5py
 import numpy as np
@@ -17,7 +18,7 @@ class DataLoader:
     """Load ARPES data from various file formats."""
 
     # HDF5 paths for ANTARES beamline format
-    ANTARES_PATHS = {
+    ANTARES_PATHS: ClassVar[dict[str, str]] = {
         "data": "salsaentry_1/scan_data/data_12",
         "x_spatial": "salsaentry_1/scan_data/actuator_1_1",
         "y_spatial": "salsaentry_1/scan_data/actuator_2_1",
@@ -76,9 +77,7 @@ class DataLoader:
             )
 
             # Collect metadata
-            metadata = {}
-            if f.attrs:
-                metadata = {k: v for k, v in f.attrs.items()}
+            metadata = dict(f.attrs) if f.attrs else {}
 
         # Create axis info objects
         x_axis = AxisInfo(values=x_values, unit="µm", label="X Position")

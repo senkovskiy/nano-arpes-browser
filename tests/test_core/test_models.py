@@ -16,7 +16,8 @@ def sample_dataset() -> ARPESDataset:
     """Create a sample dataset for testing."""
     n_y, n_x, n_angle, n_energy = 10, 10, 50, 100
 
-    intensity = np.random.rand(n_y, n_x, n_angle, n_energy).astype(np.float32)
+    rng = np.random.default_rng(0)
+    intensity = rng.random((n_y, n_x, n_angle, n_energy), dtype=np.float32)
 
     x_axis = AxisInfo(
         values=np.linspace(0, 100, n_x),
