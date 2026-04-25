@@ -19,9 +19,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from nano_arpes_browser.core.io import DataExporter, DataLoader
+from nano_arpes_browser.core.io import DataLoader
 from nano_arpes_browser.core.models import ARPESDataset, EnergyAngleROI, SpatialPosition
 from nano_arpes_browser.core.processing.kspace import KSpaceConverter
+from nano_arpes_browser.gui.export_controller import ExportController
 from nano_arpes_browser.gui.styles import DARK_THEME, LIGHT_THEME, get_pyqtgraph_config
 from nano_arpes_browser.gui.widgets import ARPESViewer, ControlPanel, InfoPanel, SpatialViewer
 
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
         pg.setConfigOptions(**pg_config)
 
         self._setup_ui()
+        self.export_controller = ExportController(self)
         self._setup_menu()
         self._setup_statusbar()
         self._connect_signals()
@@ -107,16 +109,22 @@ class MainWindow(QMainWindow):
 
         export_menu = file_menu.addMenu("&Export")
 
-        export_menu.addAction("Spatial Map (CSV)...", lambda: self._save_spatial("csv"))
-        export_menu.addAction("Spatial Map (Igor)...", lambda: self._save_spatial("itx"))
+        export_menu.addAction(
+            "Spatial Map (CSV)...", lambda: self.export_controller.save_spatial("csv")
+        )
+        export_menu.addAction(
+            "Spatial Map (Igor)...", lambda: self.export_controller.save_spatial("itx")
+        )
         export_menu.addSeparator()
-        export_menu.addAction("Spectrum (CSV)...", lambda: self._save_arpes("csv"))
-        export_menu.addAction("Spectrum (Igor)...", lambda: self._save_arpes("itx"))
+        export_menu.addAction("Spectrum (CSV)...", lambda: self.export_controller.save_arpes("csv"))
+        export_menu.addAction(
+            "Spectrum (Igor)...", lambda: self.export_controller.save_arpes("itx")
+        )
 
         export_menu.addSeparator()
-        export_menu.addAction("Selected Region (Igor)...", self._on_save_region_igor)
+        export_menu.addAction("Selected Region (Igor)...", self.export_controller.save_region_igor)
         export_menu.addSeparator()
-        export_menu.addAction("Full Dataset (Igor)...", self._on_save_full_igor)
+        export_menu.addAction("Full Dataset (Igor)...", self.export_controller.save_full_igor)
         file_menu.addSeparator()
 
         exit_action = QAction("E&xit", self)
@@ -173,19 +181,21 @@ class MainWindow(QMainWindow):
 
         # Control panel - export operations
         self.control_panel.export_map_csv_requested.connect(
-            lambda: self._save_spatial(format="csv")
+            lambda: self.export_controller.save_spatial(format="csv")
         )
         self.control_panel.export_map_igor_requested.connect(
-            lambda: self._save_spatial(format="itx")
+            lambda: self.export_controller.save_spatial(format="itx")
         )
         self.control_panel.export_spectrum_csv_requested.connect(
-            lambda: self._save_arpes(format="csv")
+            lambda: self.export_controller.save_arpes(format="csv")
         )
         self.control_panel.export_spectrum_igor_requested.connect(
-            lambda: self._save_arpes(format="itx")
+            lambda: self.export_controller.save_arpes(format="itx")
         )
-        self.control_panel.export_region_igor_requested.connect(self._on_save_region_igor)
-        self.control_panel.export_full_igor_requested.connect(self._on_save_full_igor)
+        self.control_panel.export_region_igor_requested.connect(
+            self.export_controller.save_region_igor
+        )
+        self.control_panel.export_full_igor_requested.connect(self.export_controller.save_full_igor)
 
         # Control panel - other
         self.control_panel.k_space_changed.connect(self._on_kspace_changed)
@@ -451,294 +461,6 @@ class MainWindow(QMainWindow):
         self.arpes_viewer.set_colormap(colormap)
 
     # =========================================================================
-    # Export Operations
-    # =========================================================================
-
-    def _save_spatial(self, format: str = "csv") -> None:
-        """Save spatial image."""
-        if not self._require_dataset("No Data", "Please load a dataset first."):
-            return
-
-        if self.current_roi and self.current_roi.angle_start is not None:
-            base_filename = DataExporter.generate_spatial_filename(
-                (self.current_roi.angle_start, self.current_roi.angle_end or 0),
-                (self.current_roi.energy_start or 0, self.current_roi.energy_end or 0),
-                extension=format,
-            )
-        else:
-            base_filename = f"spatial_integrated.{format}"
-
-        if format == "csv":
-            filter_str = "CSV Files (*.csv);;All Files (*)"
-        else:
-            filter_str = "Igor Text Files (*.itx);;All Files (*)"
-
-        filepath = self._get_save_filepath(
-            "Save Spatial Image",
-            str(Path.home() / base_filename),
-            filter_str,
-        )
-        if filepath is None:
-            return
-
-        image = self.spatial_viewer.get_current_image()
-        if image is None:
-            return
-
-        try:
-            if format == "csv":
-                DataExporter.save_csv(image, filepath)
-            else:
-                DataExporter.save_spatial_itx(
-                    image,
-                    filepath,
-                    x_axis=self.dataset.x_axis.values,
-                    y_axis=self.dataset.y_axis.values,
-                    x_unit=self.dataset.x_axis.unit,
-                    y_unit=self.dataset.y_axis.unit,
-                )
-            self._set_status(f"Saved: {Path(filepath).name}")
-        except Exception as e:
-            QMessageBox.critical(self, "Export Error", f"Failed to save:\n{e}")
-
-    def _save_arpes(self, format: str = "csv") -> None:
-        """Save ARPES spectrum."""
-        if not self._require_dataset("No Data", "Please load a dataset first."):
-            return
-
-        if not self._require_position("No Position", "Please select a position first."):
-            return
-
-        base_filename = DataExporter.generate_arpes_filename(
-            self.current_position.x_coord,
-            self.current_position.y_coord,
-            extension=format,
-        )
-
-        if format == "csv":
-            filter_str = "CSV Files (*.csv);;All Files (*)"
-        else:
-            filter_str = "Igor Text Files (*.itx);;All Files (*)"
-
-        filepath = self._get_save_filepath(
-            "Save ARPES Spectrum",
-            str(Path.home() / base_filename),
-            filter_str,
-        )
-        if filepath is None:
-            return
-
-        spectrum = self.arpes_viewer.get_current_data()
-        x_axis, energy_axis = self.arpes_viewer.get_current_axes()
-
-        if spectrum is None or x_axis is None or energy_axis is None:
-            return
-
-        try:
-            if format == "csv":
-                DataExporter.save_csv(spectrum, filepath)
-            else:
-                k_params = self.control_panel.get_kspace_params()
-                if k_params.enabled:
-                    x_label = "k (Å⁻¹)"
-                else:
-                    x_label = f"Angle ({self.dataset.angle_axis.unit})"
-
-                DataExporter.save_arpes_itx(
-                    spectrum,
-                    filepath,
-                    x_axis=x_axis,
-                    energy_axis=energy_axis,
-                    x_label=x_label,
-                    energy_unit=self.dataset.energy_axis.unit,
-                )
-            self._set_status(f"Saved: {Path(filepath).name}")
-        except Exception as e:
-            QMessageBox.critical(self, "Export Error", f"Failed to save:\n{e}")
-
-    def _on_save_region_igor(self) -> None:
-        """Save selected region as Igor .itx (uses integration area)."""
-        if not self._require_dataset("No Data", "Please load a dataset first."):
-            return
-
-        if not self._require_position("No Position", "Please select a position on the map."):
-            return
-
-        integration = self.control_panel.get_integration_params()
-
-        if not integration.enabled or (integration.x_pixels == 0 and integration.y_pixels == 0):
-            reply = QMessageBox.question(
-                self,
-                "Select Region",
-                "Integration is not enabled.\n\n"
-                "Enable integration and set X/Y pixels to define the region to export.\n\n"
-                "Export single spectrum at current position instead?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                self._save_arpes(format="itx")
-            return
-
-        region_data, x_axis_region, y_axis_region = self.dataset.extract_region(
-            self.current_position,
-            integration,
-        )
-
-        ny, nx, n_angle, n_energy = region_data.shape
-        region_size_mb = region_data.nbytes / (1024 * 1024)
-
-        # Confirm with user
-        msg = (
-            f"Export selected region?\n\n"
-            f"Center: X={self.current_position.x_coord:.1f}, Y={self.current_position.y_coord:.1f} µm\n"
-            f"Region: {nx} × {ny} spatial points\n"
-            f"Spectra: {n_angle} × {n_energy} (angle × energy)\n\n"
-            f"Total: {nx}×{ny}×{n_angle}×{n_energy} = {nx * ny * n_angle * n_energy:,} points\n"
-            f"Estimated size: {region_size_mb:.1f} MB"
-        )
-
-        reply = QMessageBox.question(
-            self,
-            "Export Region",
-            msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
-        )
-
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        default_name = (
-            f"region_X{self.current_position.x_coord:.0f}_"
-            f"Y{self.current_position.y_coord:.0f}_"
-            f"{nx}x{ny}.itx"
-        )
-
-        filepath = self._get_save_filepath(
-            "Save Region (Igor Pro)",
-            str(Path.home() / default_name),
-            "Igor Text Files (*.itx);;All Files (*)",
-        )
-        if filepath is None:
-            return
-
-        self._start_busy_operation("Exporting region...")
-
-        try:
-            DataExporter.save_region_itx(
-                region_data,
-                filepath,
-                x_axis=x_axis_region,
-                y_axis=y_axis_region,
-                angle_axis=self.dataset.angle_axis.values,
-                energy_axis=self.dataset.energy_axis.values,
-                x_unit=self.dataset.x_axis.unit,
-                y_unit=self.dataset.y_axis.unit,
-                angle_unit=self.dataset.angle_axis.unit,
-                energy_unit=self.dataset.energy_axis.unit,
-                center_x=self.current_position.x_coord,
-                center_y=self.current_position.y_coord,
-            )
-
-            self._set_status(f"Saved: {Path(filepath).name}")
-
-            size_mb = Path(filepath).stat().st_size / (1024 * 1024)
-
-            QMessageBox.information(
-                self,
-                "Export Complete",
-                f"Region exported!\n\n"
-                f"File: {Path(filepath).name}\n"
-                f"Size: {size_mb:.1f} MB\n\n"
-                f"Waves: region_4d, spatial_map, axes",
-            )
-
-        except Exception as e:
-            QMessageBox.critical(self, "Export Error", f"Failed to save:\n{e}")
-        finally:
-            self._finish_busy_operation()
-
-    def _on_save_full_igor(self) -> None:
-        """Save full dataset as Igor .itx."""
-        if not self._require_dataset("No Data", "Please load a dataset first."):
-            return
-
-        data_size_gb = self.dataset.intensity.nbytes / (1024**3)
-        shape = self.dataset.intensity.shape
-
-        msg = (
-            f"Export full 4D dataset?\n\n"
-            f"Data shape: {shape[0]}×{shape[1]}×{shape[2]}×{shape[3]}\n"
-            f"(Y × X × Angle × Energy)\n\n"
-            f"Estimated size: {data_size_gb:.2f} GB\n\n"
-        )
-
-        if data_size_gb > 2.0:
-            msg += "⚠️ Large file! Export may take several minutes."
-
-        reply = QMessageBox.question(
-            self,
-            "Export Full Dataset",
-            msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
-        )
-
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        default_name = "full_dataset.itx"
-        if self.dataset.filepath:
-            default_name = self.dataset.filepath.stem + "_full.itx"
-
-        filepath = self._get_save_filepath(
-            "Save Full Dataset (Igor Pro)",
-            str(Path.home() / default_name),
-            "Igor Text Files (*.itx);;All Files (*)",
-        )
-        if filepath is None:
-            return
-
-        self._start_busy_operation("Exporting full dataset...")
-
-        try:
-            result = DataExporter.save_full_dataset_itx(
-                self.dataset,
-                filepath,
-                include_4d_data=True,
-                max_file_size_gb=10.0,  # Allow up to 10 GB
-            )
-
-            self._set_status(f"Saved: {Path(filepath).name}")
-
-            size_mb = Path(filepath).stat().st_size / (1024 * 1024)
-
-            info_msg = (
-                f"Export complete!\n\n"
-                f"File: {Path(filepath).name}\n"
-                f"Size: {size_mb:.1f} MB\n\n"
-                f"Waves created:\n"
-            )
-
-            if result.get("included_4d", False):
-                info_msg += f"• arpes_4d: {shape} - Full 4D data\n"
-
-            info_msg += (
-                f"• spatial_map: Integrated image\n"
-                f"• x_spatial, y_spatial: Spatial axes\n"
-                f"• angle_axis, energy_axis: Spectral axes\n\n"
-                f"In Igor Pro:\n"
-                f'LoadWave/T "{filepath}"'
-            )
-
-            QMessageBox.information(self, "Export Complete", info_msg)
-
-        except Exception as e:
-            QMessageBox.critical(self, "Export Error", f"Failed to save:\n{e}")
-        finally:
-            self._finish_busy_operation()
-
-    # =========================================================================
     # View Operations
     # =========================================================================
 
@@ -860,7 +582,7 @@ class MainWindow(QMainWindow):
     # Window Events
     # =========================================================================
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event) -> None:  # noqa: N802
         """Handle window close."""
         reply = QMessageBox.question(
             self,
